@@ -1,82 +1,33 @@
 import { useState } from 'react'
-import type { SupportDoc } from '../../types/admin'
-import { getInitials } from '../../utils/format'
-import { useToast } from '../../hooks/useToast'
-import { initialSupports } from '../../data/adminMock'
+import type { FormEvent } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout/AdminLayout'
 import PageHero from '../../components/layout/PageHero/PageHero'
 import Card from '../../components/shared/Card/Card'
-import Avatar from '../../components/shared/Avatar/Avatar'
-import ListRow from '../../components/shared/ListRow/ListRow'
 import StatusBadge from '../../components/shared/StatusBadge/StatusBadge'
-import EmptyState from '../../components/shared/EmptyState/EmptyState'
 import Toast from '../../components/shared/Toast/Toast'
-import SupportDetailModal from '../../components/admin/SupportDetailModal'
-
-function SupportsPage() {
-  const { message, visible, showToast } = useToast()
-  const [supports, setSupports] = useState<SupportDoc[]>(initialSupports)
-  const [selected, setSelected] = useState<SupportDoc | null>(null)
-
-  const pending = supports.filter((s) => s.status === 'pendiente')
-  const reviewed = supports.filter((s) => s.status !== 'pendiente')
-
-  const resolve = (status: 'aprobado' | 'rechazado', reason = '') => {
-    if (!selected) return
-    setSupports(supports.map((s) => (s.id === selected.id ? { ...s, status, rejectReason: reason } : s)))
-    showToast(`Soporte de ${selected.monitor} ${status === 'aprobado' ? 'aprobado ✅' : 'rechazado'}`)
-    setSelected(null)
+import { useLista, request, id, nombre, mensajeError } from '../../services/tutoriaService'
+import type { Soporte } from '../../services/tutoriaService'
+export default function SupportsPage() {
+  const remote = useLista<Soporte>('/soportes', 'soportes')
+  const [selected, setSelected] = useState<Soporte | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  async function resolve(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!selected || busy) return
+    const form = new FormData(event.currentTarget); setBusy(true); setError(''); setMessage('')
+    try {
+      const result = await request(`/soportes/${encodeURIComponent(id(selected))}/revision`, 'PATCH', { estado: form.get('estado'), motivoRechazo: form.get('motivo') || '' })
+      setMessage(result.mensaje || 'Soporte revisado.'); setSelected(null); remote.refresh()
+    } catch (err) { setError(mensajeError(err)) } finally { setBusy(false) }
   }
-
-  const renderRow = (s: SupportDoc) => (
-    <ListRow
-      key={s.id}
-      leading={<Avatar initials={getInitials(s.monitor)} color="purple" size={44} />}
-      title={s.monitor}
-      subtitle={`${s.kind} · ${s.subject} · ${s.date}`}
-      trailing={
-        <StatusBadge tone={s.status === 'pendiente' ? 'pending' : s.status === 'aprobado' ? 'ok' : 'urgent'}>
-          {s.status === 'pendiente' ? 'Pendiente' : s.status === 'aprobado' ? 'Aprobado' : 'Rechazado'}
-        </StatusBadge>
-      }
-      onClick={() => setSelected(s)}
-    />
-  )
-
-  return (
-    <AdminLayout>
-      <PageHero title="Soportes académicos" description="Verifica los documentos que cargan los monitores para acreditarse." />
-
-      <div className="stack stack--lg" style={{ marginTop: 48 }}>
-        <Card title="Pendientes" subtitle={`${pending.length} por verificar`}>
-          {pending.length === 0 ? (
-            <EmptyState title="No hay soportes pendientes 🎉" message="Todos los documentos fueron revisados." />
-          ) : (
-            <div className="stack" style={{ gap: 12 }}>{pending.map(renderRow)}</div>
-          )}
-        </Card>
-
-        <Card title="Revisados" subtitle={`${reviewed.length} soportes`}>
-          {reviewed.length === 0 ? (
-            <EmptyState title="Aún no hay revisados" message="Los soportes que apruebes o rechaces aparecerán aquí." />
-          ) : (
-            <div className="stack" style={{ gap: 12 }}>{reviewed.map(renderRow)}</div>
-          )}
-        </Card>
-      </div>
-
-      {selected && (
-        <SupportDetailModal
-          support={selected}
-          onClose={() => setSelected(null)}
-          onApprove={() => resolve('aprobado')}
-          onReject={(reason) => resolve('rechazado', reason)}
-        />
-      )}
-
-      <Toast message={message} visible={visible} />
-    </AdminLayout>
-  )
+  return <AdminLayout><PageHero title="Soportes académicos" description="Documentos reales enviados por monitores para su acreditación." />
+    {message && <p role="status">{message}</p>}{error && <p role="alert">{error}</p>}
+    {remote.loading ? <p role="status">Cargando soportes...</p> : remote.error ? <div role="alert"><p>{remote.error}</p><button onClick={remote.refresh}>Reintentar</button></div> : <Card title="Soportes">
+      {!remote.items.length && <p>No hay soportes registrados.</p>}
+      {remote.items.map(s => <article key={id(s)} style={{ padding: '16px 0', borderBottom: '1px solid #ddd' }}><h3>{s.titulo || 'Soporte académico'}</h3><p>Monitor: {nombre(s.monitor)}</p><p>{s.descripcion}</p><StatusBadge tone={s.estado === 'aprobado' ? 'ok' : s.estado === 'rechazado' ? 'urgent' : 'pending'}>{s.estado || 'Pendiente'}</StatusBadge><p><a href={`/api/soportes/${encodeURIComponent(id(s))}/descargar`}>Descargar</a></p>{s.estado === 'pendiente' && <button disabled={busy} onClick={() => { setSelected(s); setError('') }}>Revisar</button>}</article>)}
+    </Card>}
+    {selected && <Card title="Revisar soporte"><form onSubmit={resolve}><label>Decisión <select name="estado" required><option value="aprobado">Aprobar</option><option value="rechazado">Rechazar</option></select></label><label>Motivo del rechazo <textarea name="motivo" maxLength={500} /></label><button type="submit" disabled={busy}>{busy ? 'Guardando...' : 'Guardar revisión'}</button><button type="button" disabled={busy} onClick={() => setSelected(null)}>Cancelar</button></form></Card>}
+    <Toast message={message} visible={Boolean(message)} />
+  </AdminLayout>
 }
-
-export default SupportsPage

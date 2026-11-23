@@ -1,92 +1,45 @@
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import type { Subject, SubjectForm } from '../../types/admin'
-import { useToast } from '../../hooks/useToast'
-import { initialSubjects } from '../../data/adminMock'
 import AdminLayout from '../../components/admin/AdminLayout/AdminLayout'
 import PageHero from '../../components/layout/PageHero/PageHero'
-import Button from '../../components/Button/Button'
 import Card from '../../components/shared/Card/Card'
 import StatusBadge from '../../components/shared/StatusBadge/StatusBadge'
-import DataTable from '../../components/shared/DataTable/DataTable'
-import type { Column } from '../../components/shared/DataTable/DataTable'
 import Toast from '../../components/shared/Toast/Toast'
-import SubjectModal from '../../components/admin/SubjectModal'
-
-function SubjectsPage() {
+import { useLista, request, id, datos, mensajeError } from '../../services/tutoriaService'
+import type { Materia } from '../../services/tutoriaService'
+const FACULTADES = ['Ingeniería', 'Economía', 'Matemáticas', 'Derecho']
+export default function SubjectsPage() {
   const [searchParams] = useSearchParams()
-  const { message, visible, showToast } = useToast()
-  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects)
-  const [modal, setModal] = useState<'new' | Subject | null>(searchParams.get('nueva') === '1' ? 'new' : null)
-
-  const editingId = modal && modal !== 'new' ? modal.id : null
-
-  // El código no puede repetirse (ignorando la materia que se está editando)
-  const isCodeTaken = (code: string) =>
-    subjects.some((s) => s.id !== editingId && s.code.toLowerCase() === code.toLowerCase())
-
-  const handleSave = (data: SubjectForm) => {
-    if (modal === 'new') {
-      setSubjects([{ id: Date.now(), active: true, ...data }, ...subjects])
-      showToast('Materia creada ✅')
-    } else if (modal) {
-      setSubjects(subjects.map((s) => (s.id === modal.id ? { ...s, ...data } : s)))
-      showToast('Materia actualizada ✅')
-    }
-    setModal(null)
+  const remote = useLista<Materia>('/materias', 'materias')
+  const [selected, setSelected] = useState<Materia | 'new' | null>(searchParams.get('nueva') === '1' ? 'new' : null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (busy) return
+    const form = datos(event.currentTarget); setBusy(true); setError(''); setMessage('')
+    const body = { nombre: form.nombre, codigo: form.codigo, facultad: form.facultad, creditos: Number(form.creditos) }
+    try {
+      const result = selected === 'new' ? await request('/materias', 'POST', body) : await request(`/materias/${encodeURIComponent(id(selected as Materia))}`, 'PUT', body)
+      setMessage(result.mensaje || 'Materia guardada.'); setSelected(null); remote.refresh()
+    } catch (err) { setError(mensajeError(err)) } finally { setBusy(false) }
   }
-
-  const toggleActive = (subject: Subject) => {
-    setSubjects(subjects.map((s) => (s.id === subject.id ? { ...s, active: !s.active } : s)))
-    showToast(`Materia ${subject.active ? 'desactivada' : 'activada'}`)
+  async function toggle(m: Materia) {
+    if (busy) return; setBusy(true); setError(''); setMessage('')
+    try {
+      const result = await request(`/materias/${encodeURIComponent(id(m))}/estado`, 'PATCH', { activa: !m.activa })
+      setMessage(result.mensaje || 'Estado actualizado.'); remote.refresh()
+    } catch (err) { setError(mensajeError(err)) } finally { setBusy(false) }
   }
-
-  const columns: Column<Subject>[] = [
-    { header: 'Código', render: (s) => <b>{s.code}</b> },
-    { header: 'Materia', render: (s) => s.name },
-    { header: 'Facultad', render: (s) => s.faculty },
-    { header: 'Créditos', render: (s) => s.credits },
-    {
-      header: 'Estado',
-      render: (s) => <StatusBadge tone={s.active ? 'ok' : 'urgent'}>{s.active ? 'Activa' : 'Inactiva'}</StatusBadge>,
-    },
-    {
-      header: 'Acciones',
-      render: (s) => (
-        <div className="table__actions">
-          <Button variant="secondary" onClick={() => setModal(s)}>Editar</Button>
-          <Button variant="secondary" onClick={() => toggleActive(s)}>{s.active ? 'Desactivar' : 'Activar'}</Button>
-        </div>
-      ),
-    },
-  ]
-
-  return (
-    <AdminLayout>
-      <PageHero title="Gestión de materias" description="Administra el catálogo de materias disponibles para las monitorías.">
-        <div style={{ marginTop: 28 }}>
-          <Button onClick={() => setModal('new')}>+ Nueva materia</Button>
-        </div>
-      </PageHero>
-
-      <div style={{ marginTop: 48 }}>
-        <Card title="Catálogo" subtitle={`${subjects.length} materia${subjects.length !== 1 ? 's' : ''}`}>
-          <DataTable columns={columns} rows={subjects} getKey={(s) => s.id} emptyMessage="Aún no hay materias." />
-        </Card>
-      </div>
-
-      {modal && (
-        <SubjectModal
-          subject={modal === 'new' ? undefined : modal}
-          isCodeTaken={isCodeTaken}
-          onClose={() => setModal(null)}
-          onSave={handleSave}
-        />
-      )}
-
-      <Toast message={message} visible={visible} />
-    </AdminLayout>
-  )
+  const editing = selected && selected !== 'new' ? selected as Materia : null
+  return <AdminLayout><PageHero title="Gestión de materias" description="Catálogo real de materias disponible para monitores y estudiantes."><button onClick={() => { setSelected('new'); setError('') }}>+ Nueva materia</button></PageHero>
+    {message && <p role="status">{message}</p>}{error && <p role="alert">{error}</p>}
+    {remote.loading ? <p role="status">Cargando materias...</p> : remote.error ? <div role="alert"><p>{remote.error}</p><button onClick={remote.refresh}>Reintentar</button></div> : <Card title="Catálogo" subtitle={`${remote.items.length} materias`}>
+      {!remote.items.length && <p>Aún no hay materias.</p>}
+      {remote.items.map(m => <article key={id(m)} style={{ padding: '16px 0', borderBottom: '1px solid #ddd' }}><h3>{m.nombre} ({m.codigo})</h3><p>{m.facultad} · {m.creditos} créditos</p><StatusBadge tone={m.activa ? 'ok' : 'urgent'}>{m.activa ? 'Activa' : 'Inactiva'}</StatusBadge><div><button disabled={busy} onClick={() => { setSelected(m); setError('') }}>Editar</button><button disabled={busy} onClick={() => toggle(m)}>{m.activa ? 'Desactivar' : 'Activar'}</button></div></article>)}
+    </Card>}
+    {selected && <Card title={editing ? 'Editar materia' : 'Nueva materia'}><form key={id(editing) || 'nueva'} onSubmit={save}><label>Nombre <input name="nombre" required minLength={3} maxLength={120} defaultValue={editing?.nombre || ''} /></label><label>Código <input name="codigo" required minLength={2} maxLength={20} defaultValue={editing?.codigo || ''} /></label><label>Facultad <select name="facultad" defaultValue={editing?.facultad || ''} required><option value="">Selecciona</option>{FACULTADES.map(f => <option key={f}>{f}</option>)}</select></label><label>Créditos <input type="number" name="creditos" min={1} max={6} step={1} defaultValue={editing?.creditos || 3} required /></label><button type="submit" disabled={busy}>{busy ? 'Guardando...' : 'Guardar materia'}</button><button type="button" disabled={busy} onClick={() => setSelected(null)}>Cancelar</button></form></Card>}
+    <Toast message={message} visible={Boolean(message)} />
+  </AdminLayout>
 }
-
-export default SubjectsPage
