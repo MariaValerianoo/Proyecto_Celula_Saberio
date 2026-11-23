@@ -1,0 +1,404 @@
+.chat { position: relative; }
+
+.chat::before {
+  content: '';
+  position: absolute;
+  inset: 28px -18px -18px 28px;
+  background: var(--lavanda);
+  border-radius: 36px;
+}
+
+.chat__panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 580px;
+  padding: 22px 22px 20px;
+  background: var(--primario);
+  color: #fff;
+  border-radius: 32px;
+}
+
+.chat__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.chat__bot {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--purpura);
+  display: grid;
+  place-items: center;
+}
+
+.chat__head b { display: block; font-size: 18px; line-height: 1.1; }
+
+.chat__status { font-size: 13px; color: #cfcbf5; display: flex; align-items: center; gap: 6px; }
+
+.chat__status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--exito);
+}
+
+.chat__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 2px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.bubble {
+  max-width: 88%;
+  padding: 12px 16px;
+  border-radius: 20px;
+  font-size: 15.5px;
+  line-height: 1.45;
+  animation: chat-in 0.3s ease;
+}
+
+.bubble--ia {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom-left-radius: 6px;
+}
+
+.bubble--user {
+  align-self: flex-end;
+  background: #fff;
+  color: var(--primario);
+  font-weight: 500;
+  border-bottom-right-radius: 6px;
+}
+
+.typing { display: inline-flex; gap: 4px; padding: 16px 18px; }
+
+.typing i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #cfcbf5;
+  animation: chat-jump 1s infinite;
+}
+
+.typing i:nth-child(2) { animation-delay: 0.15s; }
+.typing i:nth-child(3) { animation-delay: 0.3s; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-self: flex-start; animation: chat-in 0.3s ease; }
+
+.chips button {
+  padding: 7px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chips button:hover { background: #fff; color: var(--primario); }
+
+.login-card {
+  align-self: stretch;
+  padding: 16px;
+  background: #fff;
+  color: var(--primario);
+  border-radius: 20px;
+  animation: chat-in 0.35s ease;
+}
+
+.login-card p { font-size: 14.5px; color: var(--texto-suave); margin-bottom: 12px; }
+.login-card p b { color: var(--primario); }
+.login-card div { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.login-card a {
+  flex: 1 1 140px;
+  padding: 11px 18px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.login-card__primary { background: var(--acento); color: #fff; }
+.login-card__outline { border: 1.5px solid var(--linea); }
+
+.chat__form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 6px 6px 6px 18px;
+  background: #fff;
+  color: var(--primario);
+  border-radius: 18px;
+  box-shadow: 0 8px 0 -2px rgba(160, 120, 232, 0.45);
+}
+
+.chat__form:focus-within { outline: 3px solid var(--purpura); outline-offset: 2px; }
+
+.chat__form input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  color: var(--primario);
+}
+
+.chat__form button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: none;
+  width: 44px;
+  height: 44px;
+
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+
+  background: var(--acento);
+  color: #fff;
+  cursor: pointer;
+}
+
+.chat__form button svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.chat__form button:disabled { background: var(--lavanda); color: #9a9cc0; cursor: not-allowed; }
+
+@keyframes chat-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes chat-jump {
+  0%, 60%, 100% { transform: none; opacity: 0.5; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+@media (max-width: 560px) {
+  .chat__panel { height: 560px; padding: 18px 14px 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble, .chips, .login-card, .typing i { animation: none; }
+}
+
+/* ========================================
+   ASISTENTE DENTRO DEL PANEL DEL ESTUDIANTE
+======================================== */
+
+.chat--student {
+  margin-top: 26px;
+  position: relative;
+}
+
+/* Quitamos la decoración lavanda del chat público */
+.chat--student::before {
+  display: none;
+}
+
+/* Panel blanco y compacto */
+.chat--student .chat__panel {
+  height: 310px;
+  padding: 18px 20px;
+  background: #ffffff;
+  color: #252653;
+  border: 1px solid #e8e5fa;
+  border-radius: 22px;
+  box-shadow: 0 8px 24px rgba(12, 15, 55, 0.12);
+}
+
+/* Encabezado */
+.chat--student .chat__head {
+  border-bottom: 1px solid #eeecf7;
+  padding-bottom: 12px;
+}
+
+.chat--student .chat__bot {
+  background: #eee9ff;
+  color: #6546d8;
+}
+
+.chat--student .chat__head b {
+  color: #252653;
+}
+
+.chat--student .chat__status {
+  color: #77758d;
+}
+
+/* Área de conversación */
+.chat--student .chat__list {
+  padding: 14px 2px 8px;
+  scrollbar-color: #d8d2ef transparent;
+}
+
+/* Mensajes del asistente */
+.chat--student .bubble--ia {
+  background: #f2efff;
+  border: 1px solid #e7e1ff;
+  color: #34315e;
+}
+
+/* Mensajes del estudiante */
+.chat--student .bubble--user {
+  background: #5145b8;
+  color: #ffffff;
+}
+
+/* Sugerencias de materias */
+.chat--student .chips button {
+  color: #5145b8;
+  border-color: #dcd5f7;
+  background: #ffffff;
+}
+
+.chat--student .chips button:hover {
+  color: #ffffff;
+  background: #5145b8;
+  border-color: #5145b8;
+}
+
+/* Indicador de escritura */
+.chat--student .typing i {
+  background: #7563d9;
+}
+
+/* Campo de escritura */
+.chat--student .chat__form {
+  margin-top: 8px;
+  border: 1px solid #e4e0f2;
+  background: #f9f8ff;
+  box-shadow: none;
+}
+
+.chat--student .chat__form:focus-within {
+  outline: 2px solid #9b85ed;
+  outline-offset: 2px;
+}
+
+.chat--student .chat__form input {
+  color: #252653;
+}
+
+.chat--student .chat__form input::placeholder {
+  color: #9996ad;
+}
+
+.chat--student .chat__form button {
+  background: #6253d5;
+  color: #ffffff;
+  border-radius: 12px;
+}
+
+.chat--student .chat__form button:hover:not(:disabled) {
+  background: #4939b5;
+}
+
+.chat--student .chat__form button:disabled {
+  background: #e8e4f7;
+  color: #9993bb;
+}
+
+/* Adaptación móvil */
+@media (max-width: 560px) {
+  .chat--student {
+    margin-top: 22px;
+  }
+
+  .chat--student .chat__panel {
+    height: 330px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+}
+
+/* =================================
+   AJUSTE DEL CHAT DEL ESTUDIANTE
+================================= */
+
+.student-hero .chat--student {
+  margin-top: 16px;
+}
+
+.student-hero .chat--student .chat__panel {
+  height: auto;
+  min-height: 0;
+  padding: 16px 18px;
+  gap: 0;
+}
+
+/* Evita que la conversación estire el chat */
+.student-hero .chat--student .chat__list {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 150px;
+  padding: 12px 2px 6px;
+  gap: 8px;
+}
+
+/* Reduce el espacio entre el mensaje y las materias */
+.student-hero .chat--student .bubble {
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+/* Botones de materias */
+.student-hero .chat--student .chips {
+  margin: 0;
+  gap: 6px;
+}
+
+.student-hero .chat--student .chips button {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* Campo de escritura inmediatamente después */
+.student-hero .chat--student .chat__form {
+  margin-top: 10px;
+  min-height: 42px;
+  padding: 4px 5px 4px 12px;
+}
+
+.student-hero .chat--student .chat__form button {
+  width: 36px;
+  height: 36px;
+}
+
+/* Responsive */
+@media (max-width: 560px) {
+  .student-hero .chat--student .chat__panel {
+    padding: 14px;
+  }
+
+  .student-hero .chat--student .chat__list {
+    max-height: 160px;
+  }
+}
+

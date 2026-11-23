@@ -1,0 +1,311 @@
+/* =========================================
+   STUDENT HOMEPAGE — estilo inspirado en Buscar monitoría
+========================================= */
+
+.student-page {
+  --student-gap: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--student-gap);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+
+/* Contenedores principales */
+.student-page>.student-hero,
+.student-page>.main-grid {
+  width: min(100%, 1100px);
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+
+/* HERO */
+.student-page:not(.student-search-page)>.student-hero {
+  padding-top: 20px;
+}
+
+
+.student-page:not(.student-search-page) .student-hero .hero-box {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 38px 42px 34px;
+  margin: 0;
+  border-radius: 28px;
+  background: var(--primario);
+  color: #fff;
+}
+
+
+.student-home-hero-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+
+.student-page:not(.student-search-page) .hero-box__greeting {
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0 0 8px;
+  color: #cfcbf5;
+}
+
+
+.student-page:not(.student-search-page) .hero-box h1 {
+  font-size: clamp(34px, 4.2vw, 48px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  max-width: 15em;
+  margin: 0;
+}
+
+
+.student-home-hero-description {
+  margin: 10px 0 0;
+  max-width: 600px;
+  color: #cfcbf5;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+/* Decoración circular del hero */
+.student-page:not(.student-search-page) .hero-box::before {
+  width: 380px;
+  height: 380px;
+  right: -110px;
+  top: -150px;
+  opacity: .55;
+}
+
+
+.student-home-search {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  width: 90%;
+  max-width: none;
+
+  box-sizing: border-box;
+  margin-top: 24px;
+  padding: 7px 8px 7px 18px;
+
+  background: #fff;
+  border: 1px solid rgba(255, 255, 255, .35);
+  border-radius: 15px;
+
+  box-shadow: 0 5px 18px rgba(20, 20, 60, .12);
+}
+
+
+.student-home-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--primario);
+  padding: 11px 0;
+}
+
+.student-home-search input::placeholder {
+  color: #9293b2;
+}
+
+.student-home-search button {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 11px;
+  background: var(--acento);
+  color: #fff;
+  font-size: 21px;
+  cursor: pointer;
+  transition: transform .2s, background .2s;
+}
+
+.student-home-search button:hover {
+  background: var(--purpura);
+  transform: translateY(-1px);
+}
+
+
+/* GRID PRINCIPAL */
+.student-page>.main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+  gap: 28px;
+  margin: 0;
+  padding-top: 2px;
+  align-items: start;
+}
+
+
+/* Filtro activo del asistente */
+.assistant-filter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  background: var(--lavanda);
+}
+
+.assistant-filter div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.assistant-filter span {
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.assistant-filter strong {
+  color: var(--primario);
+  font-size: 14px;
+}
+
+.assistant-filter button {
+  padding: 7px 10px;
+  border: 0;
+  background: transparent;
+  color: var(--primario);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+
+/* Ajustes para evitar desbordes */
+.student-page>.main-grid>* {
+  min-width: 0;
+}
+
+.student-page .main-grid .stack {
+  min-width: 0;
+}
+
+
+/* TABLET */
+@media (max-width: 900px) {
+
+  .student-page>.student-hero,
+  .student-page>.main-grid {
+    width: calc(100% - 40px);
+  }
+
+  .student-page>.main-grid {
+    grid-template-columns: minmax(0, 1.5fr) minmax(250px, 1fr);
+    gap: 20px;
+  }
+
+  .student-page:not(.student-search-page) .student-hero .hero-box {
+    padding: 34px 30px;
+  }
+}
+
+
+/* MOBILE */
+@media (max-width: 720px) {
+  .student-page {
+    --student-gap: 18px;
+  }
+
+  .student-page:not(.student-search-page)>.student-hero {
+    padding-top: 16px;
+  }
+
+  .student-page:not(.student-search-page) .student-hero .hero-box {
+    padding: 28px 22px 24px;
+    border-radius: 24px;
+  }
+
+  .student-page:not(.student-search-page) .hero-box h1 {
+    font-size: clamp(28px, 7vw, 36px);
+  }
+
+  .student-home-hero-description {
+    font-size: 13px;
+  }
+
+  .student-page:not(.student-search-page) .hero-box::before {
+    width: 210px;
+    height: 210px;
+    right: -75px;
+    top: -90px;
+  }
+
+  .student-home-search {
+    margin-top: 20px;
+    width: 100%;
+    padding-left: 13px;
+  }
+
+  .student-home-search input {
+    font-size: 13px;
+  }
+
+  .student-page>.main-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .assistant-filter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+
+@media (max-width: 560px) {
+
+  .student-page>.student-hero,
+  .student-page>.main-grid {
+    width: calc(100% - 28px);
+  }
+
+  .student-page:not(.student-search-page) .student-hero .hero-box {
+    padding: 23px 19px 20px;
+    border-radius: 21px;
+  }
+
+  .student-page:not(.student-search-page) .hero-box h1 {
+    font-size: 27px;
+  }
+
+  .student-home-search {
+    gap: 6px;
+    padding-left: 11px;
+  }
+
+  .student-home-search button {
+    width: 35px;
+    height: 35px;
+  }
+}

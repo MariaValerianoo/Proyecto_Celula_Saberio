@@ -1,0 +1,206 @@
+/* =========================================
+   HEADER DEL ESTUDIANTE
+========================================= */
+
+.request-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.request-head b {
+  display: block;
+  color: var(--primario);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.request-head span {
+  display: block;
+  margin-top: 3px;
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+
+/* =========================================
+   DETALLES
+========================================= */
+
+.request-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 18px;
+  row-gap: 8px;
+
+  background: #f8f8fc;
+  border: 1px solid #ededf5;
+  border-radius: 16px;
+
+  padding: 14px 16px;
+  margin: 0;
+}
+
+.request-details dt {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--texto-suave);
+  margin-bottom: 4px;
+}
+
+.request-details dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--primario);
+  overflow-wrap: anywhere;
+}
+
+/* =========================================
+   MOTIVO DEL RECHAZO
+========================================= */
+
+.request-rejection {
+  margin-top: 0;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 560px) {
+  .request-details {
+    grid-template-columns: 1fr;
+    row-gap: 8px;
+    padding: 12px 14px;
+  }
+
+  .request-head b {
+    font-size: 16px;
+  }
+}
+
+/* Ajustes exclusivos del modal de solicitudes */
+.request-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.request-head .avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.request-head > div {
+  min-width: 0;
+}
+
+.request-head b {
+  display: block;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.request-head span {
+  display: block;
+  color: var(--texto-suave);
+  margin-top: 4px;
+}
+
+/* Evita que la información se desborde */
+.request-details {
+  width: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+  background: #f7f7fb;
+  border: 1px solid #eceaf8;
+  border-radius: 18px;
+  padding: 20px;
+  margin: 0 0 18px;
+}
+
+.request-details > div {
+  min-width: 0;
+}
+
+.request-details dt {
+  font-size: 13px;
+  color: var(--texto-suave);
+  margin-bottom: 6px;
+}
+
+.request-details dd {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Evita que el contenido se expanda horizontalmente */
+.request-details,
+.request-details * {
+  box-sizing: border-box;
+}
+
+@media (max-width: 560px) {
+  .request-details {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 16px;
+  }
+}
+
+.request-head .avatar {
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px;
+  min-height: 56px;
+  flex: 0 0 56px;
+  border-radius: 50%;
+  line-height: 1;
+  overflow: hidden;
+}
+
+/* Ajuste exclusivo para el modal de solicitudes */
+.request-details {
+  background: #f7f7fb;
+}
+
+/* Mantener el contenedor del modal blanco */
+.modal {
+  background-color: #ffffff;
+}
+
+/* =========================================
+   AJUSTE EXCLUSIVO DEL MODAL DE SOLICITUD
+========================================= */
+
+/* Fondo blanco del contenido */
+.request-head,
+.request-details,
+.request-details > div {
+  background-color: #ffffff;
+}
+
+/* Mantener separación visual de los detalles */
+.request-details {
+  border: 1px solid #ecebfa;
+  border-radius: 16px;
+}
+
+/* Etiquetas */
+.request-details dt {
+  color: var(--texto-suave);
+}
+
+/* Información */
+.request-details dd {
+  color: var(--primario);
+}

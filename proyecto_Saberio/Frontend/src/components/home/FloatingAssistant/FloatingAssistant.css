@@ -1,0 +1,382 @@
+/* =========================================
+   ASISTENTE FLOTANTE
+========================================= */
+
+.floating-assistant {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 9999;
+}
+
+/* Botón flotante */
+.floating-assistant__button {
+  width: 62px;
+  height: 62px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #6253d5;
+  color: white;
+
+  font-size: 28px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  box-shadow: 0 8px 24px rgba(35, 29, 100, 0.25);
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.floating-assistant__button:hover {
+  transform: translateY(-3px);
+  background: #4939b5;
+  box-shadow: 0 12px 28px rgba(35, 29, 100, 0.3);
+}
+
+.floating-assistant__button.is-open {
+  background: #39336f;
+}
+
+/* Ventana del chat */
+.floating-assistant__window {
+  position: absolute;
+  right: 0;
+  bottom: 78px;
+
+  width: 380px;
+  height: 520px;
+  max-height: calc(100vh - 120px);
+
+  display: flex;
+  flex-direction: column;
+
+  background: white;
+  border: 1px solid #e8e5fa;
+  border-radius: 22px;
+
+  overflow: hidden;
+
+  box-shadow: 0 16px 45px rgba(20, 20, 65, 0.2);
+
+  animation: assistant-appear 0.2s ease;
+}
+
+/* Cabecera */
+.floating-assistant__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  flex-shrink: 0;
+
+  padding: 16px 18px;
+
+  background: #202257;
+  color: white;
+}
+
+.floating-assistant__header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.floating-assistant__header strong {
+  font-size: 15px;
+}
+
+.floating-assistant__header span {
+  font-size: 11px;
+  color: #d0ccff;
+}
+
+.floating-assistant__close {
+  width: 30px;
+  height: 30px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+  color: white;
+
+  font-size: 24px;
+
+  cursor: pointer;
+}
+
+.floating-assistant__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Chat dentro de la ventana */
+.floating-assistant__window .chat--student {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
+
+.floating-assistant__window .chat--student::before {
+  display: none;
+}
+
+.floating-assistant__window .chat--student .chat__panel {
+  height: 100%;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Animación */
+@keyframes assistant-appear {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================
+   ASISTENTE FLOTANTE
+========================================= */
+
+.floating-assistant {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 9999;
+}
+
+/* BOTÓN FLOTANTE */
+
+.floating-assistant__button {
+  width: 60px;
+  height: 60px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 50%;
+
+  background: #6253d5;
+  color: #ffffff;
+
+  cursor: pointer;
+
+  box-shadow: 0 8px 24px rgba(35, 29, 100, 0.25);
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.floating-assistant__button:hover {
+  transform: translateY(-3px);
+  background: #4939b5;
+  box-shadow: 0 12px 28px rgba(35, 29, 100, 0.3);
+}
+
+.floating-assistant__button.is-open {
+  background: #39336f;
+}
+
+.floating-assistant__close-icon {
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* =========================================
+   VENTANA
+========================================= */
+
+.floating-assistant__window {
+  position: absolute;
+  right: 0;
+  bottom: 76px;
+
+  width: 380px;
+  height: 500px;
+  max-height: calc(100vh - 110px);
+
+  display: flex;
+  flex-direction: column;
+
+  background: #ffffff;
+
+  border: 1px solid #e8e5fa;
+  border-radius: 22px;
+
+  overflow: hidden;
+
+  box-shadow: 0 16px 45px rgba(20, 20, 65, 0.2);
+
+  animation: assistant-appear 0.2s ease;
+}
+
+/* =========================================
+   BARRA SUPERIOR
+========================================= */
+
+.floating-assistant__header {
+  height: 76px;
+  min-height: 76px;
+  flex: 0 0 76px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  box-sizing: border-box;
+
+  padding: 12px 20px;
+
+  background: #202257;
+  color: white;
+}
+
+.floating-assistant__header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.floating-assistant__header strong {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.floating-assistant__header span {
+  font-size: 12px;
+  line-height: 1.2;
+  color: #d0ccff;
+}
+
+/* Cerrar */
+
+.floating-assistant__close {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+  color: white;
+
+  font-size: 24px;
+
+  cursor: pointer;
+}
+
+.floating-assistant__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* =========================================
+   CHAT
+========================================= */
+
+.floating-assistant__window .chat--student {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
+
+.floating-assistant__window .chat--student::before {
+  display: none;
+}
+
+.floating-assistant__window .chat--student .chat__panel {
+  height: 100%;
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  border: none;
+  border-radius: 0;
+
+  box-shadow: none;
+}
+
+/* Evita duplicar el encabezado */
+.floating-assistant__window .chat--student .chat__head {
+  display: none;
+}
+
+/* Conversación */
+.floating-assistant__window .chat--student .chat__list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+/* =========================================
+   ANIMACIÓN
+========================================= */
+
+@keyframes assistant-appear {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 560px) {
+  .floating-assistant {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .floating-assistant__window {
+    width: calc(100vw - 32px);
+    right: -4px;
+    height: min(500px, calc(100vh - 100px));
+  }
+
+  .floating-assistant__button {
+    width: 56px;
+    height: 56px;
+  }
+}

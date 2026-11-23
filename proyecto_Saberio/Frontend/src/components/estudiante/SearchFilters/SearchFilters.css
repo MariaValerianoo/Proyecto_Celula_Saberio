@@ -1,0 +1,332 @@
+
+.search {
+  --s-lila: #ece8fb;
+  --s-morado: #6c5fd0;
+  --s-morado-texto: #5b4fd6;
+  --s-oscuro: #1e1b4b;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+/* =================================
+   BARRA DE BÚSQUEDA
+================================= */
+
+.search__box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 5px 12px 5px 16px;
+  background: #fff;
+  border: 1px solid #e7e3f5;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(30, 27, 75, 0.08);
+}
+
+.search__box:focus-within {
+  border-color: var(--s-morado);
+  box-shadow: 0 0 0 3px rgba(108, 95, 208, 0.15);
+}
+
+.search__box > span {
+  flex-shrink: 0;
+  font-size: 17px;
+}
+
+.search__box input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  padding: 8px 4px;
+  color: var(--s-oscuro);
+}
+
+.search__box input::placeholder {
+  color: #9996ad;
+}
+
+.search__box button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: #6253d5;
+  color: white;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.search__box button:hover {
+  background: #4939b5;
+}
+
+/* =================================
+   BÚSQUEDAS ACTIVAS
+================================= */
+
+.search__active-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 2px 0;
+}
+
+.search__active-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 12px;
+  background: #eee9ff;
+  color: #5145b8;
+  border: 1px solid #ded6fa;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.search__active-tag button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #dcd3fa;
+  color: #5145b8;
+  font-family: Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.search__active-tag button:hover {
+  background: #6253d5;
+  color: white;
+}
+
+/* =================================
+   FILTROS PERSONALIZADOS
+================================= */
+
+.search__filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.search__filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 12px;
+  background: #fff;
+  border: 1px solid #e5e1f3;
+  border-radius: 14px;
+  color: var(--s-oscuro);
+  font-size: 12px;
+  font-weight: 600;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search__filter.is-open {
+  z-index: 20;
+  border-color: var(--s-morado);
+  box-shadow: 0 0 0 2px rgba(108, 95, 208, 0.12);
+}
+
+.search__filter-label {
+  white-space: nowrap;
+}
+
+/* Botón que abre el menú */
+
+.search__select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+  gap: 8px;
+  padding: 5px 4px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--s-oscuro);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.search__select:hover {
+  background: #f8f6ff;
+}
+
+.search__arrow {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  border-right: 2px solid var(--s-morado-texto);
+  border-bottom: 2px solid var(--s-morado-texto);
+  transform: rotate(45deg);
+  margin: -5px 5px 0 8px;
+  transition: transform 0.2s ease;
+}
+
+.search__filter.is-open .search__arrow {
+  transform: rotate(225deg);
+  margin-top: 5px;
+}
+
+/* Menú desplegable */
+
+.search__options {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e5e1f3;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(30, 27, 75, 0.14);
+  animation: searchDropdown 0.16s ease;
+}
+
+.search__option {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--s-oscuro);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.search__option:hover {
+  background: var(--s-lila);
+  color: var(--s-morado-texto);
+}
+
+.search__option.selected {
+  background: var(--s-morado);
+  color: #fff;
+}
+
+.search__option.selected:hover {
+  background: #5749bd;
+  color: #fff;
+}
+
+@keyframes searchDropdown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =================================
+   MATERIAS RÁPIDAS
+================================= */
+
+.search__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.search__chips button {
+  padding: 7px 14px;
+  border-radius: 9px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  background: var(--s-lila);
+  color: var(--s-morado-texto);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.search__chips button:hover {
+  background: #ddd6fa;
+  color: #4939b5;
+}
+
+.search__chips button:active {
+  background: var(--s-morado);
+  color: #fff;
+}
+
+/* =================================
+   RESPONSIVE
+================================= */
+
+@media (max-width: 720px) {
+  .search__filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .search__filters {
+    grid-template-columns: 1fr;
+  }
+
+  .search__filter {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search__chips button,
+  .search__arrow,
+  .search__option {
+    transition: none;
+  }
+
+  .search__options {
+    animation: none;
+  }
+}

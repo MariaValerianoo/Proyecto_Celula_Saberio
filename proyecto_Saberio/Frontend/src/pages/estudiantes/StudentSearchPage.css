@@ -1,0 +1,40 @@
+
+/* =========================================
+   PÁGINA DE BÚSQUEDA
+========================================= */
+
+.student-search-page {
+  width: 100%;
+}
+
+/* Buscador y filtros */
+.student-search-page__filters {
+  width: 100%;
+  margin-top: 28px;
+}
+
+/* Resultados */
+.student-search-page__results {
+  width: 100%;
+  margin-top: 28px;
+}
+
+.student-search-page__list {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 720px) {
+  .student-search-page__filters {
+    margin-top: 24px;
+  }
+
+  .student-search-page__results {
+    margin-top: 24px;
+  }
+}

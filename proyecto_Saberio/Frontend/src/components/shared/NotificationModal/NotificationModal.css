@@ -1,0 +1,245 @@
+/*NOTIFICAcION MODAL
+*/
+
+.notification-modal__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(15, 18, 40, 0.45);
+    backdrop-filter: blur(3px);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+    animation: notificationFadeIn 0.2s ease;
+}
+
+/* Contenedor principal */
+.notification-modal {
+    width: 100%;
+    max-width: 460px;
+    max-height: calc(100vh - 40px);
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(20, 20, 60, 0.2);
+    overflow: hidden;
+
+    display: flex;
+    flex-direction: column;
+
+    animation: notificationSlideIn 0.25s ease;
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+.notification-modal__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+
+    padding: 22px 24px;
+    border-bottom: 1px solid #eee;
+}
+
+.notification-modal__eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.notification-modal__header h2 {
+    margin: 6px 0 0;
+    color: #25264f;
+    font-size: 20px;
+    line-height: 1.4;
+}
+
+.notification-modal__close {
+    border: none;
+    background: transparent;
+    color: #777;
+    font-size: 26px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.notification-modal__close:hover {
+    color: #25264f;
+}
+
+/* =========================================
+   BODY
+========================================= */
+
+.notification-modal__body {
+    padding: 16px 24px;
+    overflow-y: auto;
+}
+
+/* Tarjeta de información */
+.notification-modal__details {
+    margin: 0;
+    padding: 18px 20px;
+
+    background: linear-gradient(145deg,
+            #f8f8ff,
+            #f1f0ff);
+
+    border: 1px solid #e8e6fa;
+    border-radius: 16px;
+
+    box-shadow:
+        0 3px 10px rgba(45, 39, 100, 0.04),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Párrafos introductorios */
+.notification-modal__paragraph {
+    margin: 0 0 16px;
+    color: #555b78;
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+/* Filas de información */
+.notification-modal__detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+
+    margin: 0 0 12px;
+    padding: 0 0 10px;
+
+    border-bottom: 1px solid rgba(104, 98, 217, 0.10);
+}
+
+/* Etiquetas */
+.notification-modal__detail-row strong {
+    color: #292b55;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+/* Valores */
+.notification-modal__detail-row span {
+    color: #626782;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Última fila */
+.notification-modal__detail-row:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+/* Tiempo */
+.notification-modal__time {
+    display: block;
+    margin-top: 14px;
+    color: #898ba3;
+    font-size: 12px;
+}
+
+/* =========================================
+   FOOTER
+========================================= */
+
+.notification-modal__footer {
+    padding: 14px 24px;
+    border-top: 1px solid #eee;
+
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+/* Botón cerrar */
+.notification-modal__button {
+    border: none;
+    background: var(--acento);
+    color: white;
+    padding: 11px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.notification-modal__button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* =========================================
+   ANIMATIONS
+========================================= */
+
+@keyframes notificationFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes notificationSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 480px) {
+    .notification-modal {
+        border-radius: 16px;
+        max-width: 100%;
+    }
+
+    .notification-modal__header {
+        padding: 20px 24px;
+    }
+
+
+
+    .notification-modal__body {
+        padding: 18px 20px;
+    }
+
+    .notification-modal__footer {
+        padding: 14px 20px;
+    }
+
+    .notification-modal__header h2 {
+        margin: 6px 0 0;
+        font-size: 21px;
+        line-height: 1.35;
+    }
+
+    .notification-modal__details {
+        padding: 16px;
+    }
+}
