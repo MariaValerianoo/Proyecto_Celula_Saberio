@@ -10,7 +10,7 @@ const router = Router();
 router.post(
   '/',
   autenticar,
-  requerirRol('estudiante'),
+  requerirRol('estudiante', 'monitor'),
   validarSolicitudTutoria,
   controlador.crear
 );
