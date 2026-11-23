@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Monitor, SessionRequestForm, StudentProfile } from '../../types/monitoring'
+import type { Monitor, SessionRequestForm } from '../../types/monitoring'
 import { getSession } from '../../services/authService'
-import { firstName, normalize } from '../../utils/format'
+import { firstName } from '../../utils/format'
 import { useToast } from '../../hooks/useToast'
-import { request, id, nombre, dia, mensajeError } from '../../services/tutoriaService'
-import type { Resultado, PublicacionBusqueda } from '../../services/tutoriaService'
-import { initialRequests, studentNotifications, studentProfile } from '../../data/studentMock'
+import { request, useLista, id, nombre, dia, mensajeError } from '../../services/tutoriaService'
+import type { Resultado, PublicacionBusqueda, Solicitud } from '../../services/tutoriaService'
+import { useStudentProfile } from '../../components/estudiante/StudentProfileFlow'
 import DashboardLayout from '../../components/layout/DashboardLayout/DashboardLayout'
 import PageHero from '../../components/layout/PageHero/PageHero'
 import Card from '../../components/shared/Card/Card'
@@ -18,180 +18,65 @@ import Toast from '../../components/shared/Toast/Toast'
 import MonitorCard from '../../components/estudiante/monitorCard/monitorCard'
 import RequestModal from '../../components/estudiante/RequestModal'
 import ProfileCard from '../../components/estudiante/ProfileCard'
-import ProfileModal from '../../components/estudiante/ProfileModal'
 import './StudentHomePage.css'
-
-const AVATAR_COLORS = ['primary', 'purple', 'blue', 'dark'] as const
-
-interface Tarjeta extends Monitor {
-  resultado: Resultado
-  publicacion: PublicacionBusqueda
-}
-
-function StudentHomePage() {
+interface Tarjeta extends Monitor { key: string; resultado: Resultado; publicacion: PublicacionBusqueda }
+export default function StudentHomePage() {
   const user = getSession()
   const navigate = useNavigate()
+  const profile = useStudentProfile()
   const { message, visible, showToast } = useToast()
-  const [assistantFilter, setAssistantFilter] = useState<{ subject: string; topic: string | null } | null>(null)
   const [query, setQuery] = useState('')
-  const [queryTags, setQueryTags] = useState<string[]>([])
-  const [modality, setModality] = useState('')
-  const [minRating, setMinRating] = useState('')
-  const [sort, setSort] = useState('best')
-  const [selection, setSelection] = useState<{ monitorId: string; slot: string } | null>(null)
-  const [requesting, setRequesting] = useState<Tarjeta | null>(null)
-  const [items, setItems] = useState<Resultado[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [revision, setRevision] = useState(0)
-  const [profile, setProfile] = useState<StudentProfile>(studentProfile)
-  const [editingProfile, setEditingProfile] = useState(false)
-  const [requests, setRequests] = useState(initialRequests)
-
-  useEffect(() => {
-    let active = true
-    setLoading(true); setError(''); setItems([])
-    const params = new URLSearchParams()
-    if (modality) params.set('modalidad', modality)
-    if (minRating) params.set('calificacionMinima', minRating)
-    if (sort === 'rating') params.set('orden', 'calificacion')
-    if (sort === 'exp') params.set('orden', 'experiencia')
-    if (sort === 'slots') params.set('orden', 'disponibilidad')
-    request('/busqueda/monitores?' + params).then(data => {
-      if (!Array.isArray(data.monitores)) throw new Error('Formato de resultados no válido.')
-      if (active) setItems(data.monitores)
-    }).catch(err => { if (active) setError(mensajeError(err)) }).finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [modality, minRating, sort, revision])
-
-  const handleHeroSearch = (searchValue?: string) => {
-    const value = (searchValue ?? query).trim()
-    if (!value) return
-    navigate('/estudiante/buscar-monitoria', { state: { query: value } })
-  }
-
-  const handleQuerySubmit = (searchValue?: string) => {
-    const value = (searchValue ?? query).trim()
-    if (!value) return
-    setQueryTags(prev => prev.some(tag => normalize(tag) === normalize(value)) ? prev : [...prev, value])
-    setQuery('')
-  }
-
-  const handleStudentMatch = (subject: string, topic: string | null) => {
-    setAssistantFilter({ subject, topic })
-    setQuery(topic || subject)
-  }
-
-  const clearFilters = () => {
-    setQuery(''); setQueryTags([]); setModality(''); setMinRating(''); setSort('best'); setAssistantFilter(null)
-  }
-
-  const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  const termino = queryTags.join(' ')
-
+  const remote = useLista<Resultado>('/busqueda/monitores', 'monitores')
+  const solicitudes = useLista<Solicitud>('/solicitudes', 'solicitudes')
+  const [selection, setSelection] = useState<{ key: string; slot: string } | null>(null)
+  const [requesting, setRequesting] = useState<{ monitor: Tarjeta; slot: string } | null>(null)
+  const [sending, setSending] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const tarjetas = useMemo<Tarjeta[]>(() => {
-    const resultado: Tarjeta[] = []
-    items.forEach(item => {
-      const nombreMonitor = nombre(item.monitor)
-      item.publicaciones.forEach((publicacion, indice) => {
-        const texto = normalizar(`${nombreMonitor} ${nombre(publicacion.materia)} ${publicacion.descripcion || ''}`)
-        if (termino && !texto.includes(normalizar(termino))) return
-        const calificacion = item.calificacion ?? 0
-        if (minRating && calificacion < Number(minRating)) return
-        const color = AVATAR_COLORS[indice % AVATAR_COLORS.length]
-        resultado.push({
-          id: indice,
-          name: nombreMonitor,
-          initials: nombreMonitor.slice(0, 2).toUpperCase(),
-          color,
-          career: 'Monitor aprobado',
-          subject: nombre(publicacion.materia),
-          rating: calificacion,
-          helped: item.totalEvaluaciones,
-          response: '—',
-          online: false,
-          modality: publicacion.modalidad === 'Ambas' ? 'Ambas' : publicacion.modalidad,
-          tagline: publicacion.descripcion || 'Monitoría disponible',
-          topics: [],
-          keywords: [],
-          slots: item.disponibilidad.map(d => `${dia(d.fecha)} · ${d.horaInicio}–${d.horaFin}`),
-          resultado: item,
-          publicacion,
-        })
-      })
-    })
-    if (assistantFilter) {
-      return resultado.filter(m => normalizar(m.subject).includes(normalizar(assistantFilter.subject)))
-    }
-    if (sort === 'best' || sort === 'rating') resultado.sort((a, b) => b.rating - a.rating)
-    if (sort === 'slots') resultado.sort((a, b) => b.slots.length - a.slots.length)
-    if (sort === 'exp') resultado.sort((a, b) => b.helped - a.helped)
-    return resultado
-  }, [items, termino, minRating, sort, assistantFilter])
-
-  const sugeridos = tarjetas.slice(0, 3)
-
-  const handleSelectSlot = (monitorId: string, slot: string) => {
-    const same = selection?.monitorId === monitorId && selection.slot === slot
-    setSelection(same ? null : { monitorId, slot })
-  }
-
-  const handleSubmitRequest = async (data: SessionRequestForm) => {
-    if (!requesting) return
+    let index = 0
+    return remote.items.flatMap(item => item.publicaciones.map(publicacion => {
+      const name = nombre(item.monitor)
+      const modality: Monitor['modality'] = publicacion.modalidad === 'Virtual' ? 'Virtual' : publicacion.modalidad === 'Presencial' ? 'Presencial' : 'Ambas'
+      return { id: index++, key: `${id(item.monitor)}-${id(publicacion) || id(publicacion.materia)}`, name, initials: name.slice(0, 2).toUpperCase(), color: 'primary' as const, career: 'Monitor', subject: nombre(publicacion.materia), rating: item.calificacion ?? 0, helped: item.totalEvaluaciones, response: '—', online: false, modality, tagline: publicacion.descripcion || 'Monitoría disponible', topics: [], keywords: [], slots: item.disponibilidad.map(d => `${dia(d.fecha)} · ${d.horaInicio}–${d.horaFin}`), resultado: item, publicacion }
+    })).sort((a, b) => b.rating - a.rating).slice(0, 3)
+  }, [remote.items])
+  const pending = solicitudes.items.filter(s => s.estado === 'Pendiente' || s.estado === 'Reprogramada')
+  async function submit(data: SessionRequestForm) {
+    if (!requesting || sending) return
+    setSending(true); setSubmitError('')
     try {
-      const resultado = await request('/solicitudes', 'POST', {
-        monitor: id(requesting.resultado.monitor),
-        materia: id(requesting.publicacion.materia),
-        tema: data.topic,
-        descripcion: `${data.goal}. ${data.notes || ''}`.trim(),
-        modalidad: data.modality,
-        fechaPreferida: selection?.slot.split(' · ')[0] || new Date().toISOString().slice(0, 10),
-        horaPreferida: selection?.slot.split(' · ')[1]?.split('–')[0] || '08:00',
-        duracionEstimadaHoras: 1,
-      })
-      showToast(resultado.mensaje || 'Solicitud enviada ✅')
-      setRequesting(null); setSelection(null); setRevision(v => v + 1)
-    } catch (err) { setError(mensajeError(err)) }
+      const [fecha, horario] = requesting.slot.split(' · ')
+      if (!fecha || !horario) throw new Error('Selecciona un horario disponible.')
+      const result = await request('/solicitudes', 'POST', { monitor: id(requesting.monitor.resultado.monitor), materia: id(requesting.monitor.publicacion.materia), tema: data.topic, descripcion: `${data.goal}. ${data.notes || ''}`.trim(), modalidad: data.modality, fechaPreferida: fecha, horaPreferida: horario.split('–')[0], duracionEstimadaHoras: 1 })
+      showToast(result.mensaje || 'Solicitud enviada.')
+      setRequesting(null); setSelection(null); solicitudes.refresh(); remote.refresh()
+    } catch (err) { setSubmitError(mensajeError(err)) } finally { setSending(false) }
   }
-
-  return (
-    <DashboardLayout role="estudiante" notifications={studentNotifications}>
-      <div className="student-page">
-        <div className="student-hero">
-          <PageHero greeting={`Hola, ${firstName(user?.name ?? '')} 👋`} title="¿Qué quieres estudiar hoy?">
-            <div className="student-home-hero-content">
-              <p className="student-home-hero-description">Encuentra un monitor que te ayude a preparar tus parciales, resolver dudas y reforzar tus materias.</p>
-              <form className="student-home-search" onSubmit={e => { e.preventDefault(); handleHeroSearch() }}>
-                <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Ej. Integrales por partes, parcial el jueves..." aria-label="Buscar materia o tema" />
-                <button type="submit" aria-label="Buscar monitoría"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg></button>
-              </form>
-            </div>
-          </PageHero>
+  return <DashboardLayout role="estudiante" notifications={[]}>
+    <div className="student-page">
+      <div className="student-hero"><PageHero greeting={`Hola, ${firstName(user?.name ?? '')}`} title="¿Qué quieres estudiar hoy?">
+        <div className="student-home-hero-content">
+          <p className="student-home-hero-description">Encuentra un monitor que te ayude a preparar tus parciales, resolver dudas y reforzar tus materias.</p>
+          <form className="student-home-search" onSubmit={e => { e.preventDefault(); if (query.trim()) navigate('/estudiante/buscar-monitoria', { state: { query: query.trim() } }) }}>
+            <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Ej. Integrales por partes, parcial el jueves..." aria-label="Buscar materia o tema" />
+            <button type="submit" aria-label="Buscar monitoría"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg></button>
+          </form>
         </div>
-        <div className="main-grid">
-          <Card title="Sugerencias para ti" subtitle={`${sugeridos.length} sugerencias`}>
-            {assistantFilter && <div className="assistant-filter"><div><span>Resultados del asistente</span><strong>{assistantFilter.subject}{assistantFilter.topic ? ` · ${assistantFilter.topic}` : ''}</strong></div><button type="button" onClick={() => setAssistantFilter(null)}>Quitar filtro</button></div>}
-            {loading ? <p role="status">Cargando monitores...</p> : error ? <EmptyState title="No pudimos cargar los monitores" message={error} actionLabel="Reintentar" onAction={() => setRevision(v => v + 1)} /> : sugeridos.length === 0 ? <EmptyState title="No encontramos monitores para eso" message="Prueba con otro tema o modifica los filtros de búsqueda." actionLabel="Ver todos los monitores" onAction={clearFilters} /> : (
-              <div className="stack">
-                {sugeridos.map(monitor => <MonitorCard key={`${id(monitor.resultado.monitor)}-${monitor.id}`} monitor={monitor} selectedSlot={selection?.monitorId === String(monitor.id) ? selection.slot : null} onSelectSlot={slot => handleSelectSlot(String(monitor.id), slot)} onReserve={() => { if (selection?.monitorId === String(monitor.id)) setRequesting(monitor) }} />)}
-              </div>
-            )}
+      </PageHero></div>
+      {submitError && <p role="alert">{submitError}</p>}{sending && <p role="status">Enviando solicitud...</p>}
+      <div className="main-grid">
+        <Card title="Sugerencias para ti" subtitle={`${tarjetas.length} sugerencias`}>
+          {remote.loading ? <p role="status">Cargando monitores...</p> : remote.error ? <EmptyState title="No pudimos cargar los monitores" message={remote.error} actionLabel="Reintentar" onAction={remote.refresh} /> : tarjetas.length === 0 ? <EmptyState title="No hay monitores disponibles" message="Cuando haya publicaciones disponibles aparecerán aquí." /> : <div className="stack">{tarjetas.map(m => <MonitorCard key={m.key} monitor={m} selectedSlot={selection?.key === m.key ? selection.slot : null} onSelectSlot={slot => setSelection(previous => previous?.key === m.key && previous.slot === slot ? null : { key: m.key, slot })} onReserve={() => { if (selection?.key === m.key) { setSubmitError(''); setRequesting({ monitor: m, slot: selection.slot }) } }} />)}</div>}
+        </Card>
+        <aside className="stack side">
+          <ProfileCard profile={profile.summary} onEdit={profile.edit} />
+          <Card title="Solicitudes en proceso" small>
+            {solicitudes.loading ? <p role="status">Cargando solicitudes...</p> : solicitudes.error ? <EmptyState title="No pudimos cargar tus solicitudes" message={solicitudes.error} actionLabel="Reintentar" onAction={solicitudes.refresh} /> : pending.length === 0 ? <EmptyState title="Sin solicitudes en proceso" message="Tus solicitudes pendientes aparecerán aquí." /> : <div className="stack" style={{ gap: 12 }}>{pending.map(s => <ListRow key={id(s)} leading={<Avatar initials={nombre(s.monitor).slice(0, 2).toUpperCase()} color="primary" size={38} />} title={nombre(s.materia)} subtitle={`${nombre(s.monitor)} · ${dia(s.fechaPreferida)}`} trailing={<StatusBadge tone={s.estado === 'Pendiente' ? 'pending' : 'review'}>{s.estado}</StatusBadge>} />)}</div>}
           </Card>
-          <aside className="stack side">
-            <ProfileCard profile={profile} onEdit={() => setEditingProfile(true)} />
-            <Card title="Solicitudes en proceso" small>
-              <div className="stack" style={{ gap: 12 }}>
-                {requests.map(solicitud => <ListRow key={solicitud.id} leading={<Avatar initials={solicitud.initials} color={solicitud.color} size={38} />} title={solicitud.subject} subtitle={solicitud.detail} trailing={<StatusBadge tone={solicitud.status === 'pending' ? 'pending' : 'review'}>{solicitud.status === 'pending' ? 'Pendiente' : 'En revisión'}</StatusBadge>} />)}
-              </div>
-            </Card>
-          </aside>
-        </div>
+        </aside>
       </div>
-      {requesting && <RequestModal monitor={requesting} slot={selection?.slot || ''} onClose={() => setRequesting(null)} onSubmit={handleSubmitRequest} />}
-      {editingProfile && <ProfileModal profile={profile} onClose={() => setEditingProfile(false)} onSave={p => { setProfile(p); setEditingProfile(false); showToast('Perfil actualizado ✅') }} />}
-      <Toast message={message} visible={visible} />
-    </DashboardLayout>
-  )
+    </div>
+    {requesting && <RequestModal monitor={requesting.monitor} slot={requesting.slot} onClose={() => { if (!sending) setRequesting(null) }} onSubmit={submit} />}
+    <Toast message={message} visible={visible} />
+  </DashboardLayout>
 }
-
-export default StudentHomePage
