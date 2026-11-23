@@ -52,8 +52,23 @@ app.use('/api/evaluaciones', rutasEvaluacion);
 app.use('/api/disponibilidad', rutasDisponibilidad);
 app.use('/api/publicaciones', rutasPublicacion);
 app.use('/api/busqueda', rutasBusqueda);
-app.use('/api/soportes', rutasSoporteAcademico);
+if (process.env.DESACTIVAR_SOPORTES === 'true') {
+  app.use('/api/soportes', (req, res) => {
+    res.status(503).json({
+      error: {
+        codigo: 'SOPORTES_NO_DISPONIBLES',
+        mensaje:
+          'El módulo de soportes está temporalmente deshabilitado.',
+      },
+    });
+  });
+} else {
+  const rutasSoporteAcademico = require(
+    './src/routes/soporteAcademico.routes'
+  );
 
+  app.use('/api/soportes', rutasSoporteAcademico);
+}
 app.use(rutaNoEncontrada);
 app.use(manejarErrores);
 
