@@ -1,77 +1,34 @@
 import { useState } from 'react'
-import type { IncomingRequest } from '../../types/monitoring'
-import { useToast } from '../../hooks/useToast'
-import { initialRequests } from '../../data/monitorMock'
+import type { FormEvent } from 'react'
 import MonitorLayout from '../../components/monitor/MonitorLayout/MonitorLayout'
 import PageHero from '../../components/layout/PageHero/PageHero'
 import Card from '../../components/shared/Card/Card'
-import Avatar from '../../components/shared/Avatar/Avatar'
-import ListRow from '../../components/shared/ListRow/ListRow'
-import StatusBadge from '../../components/shared/StatusBadge/StatusBadge'
-import EmptyState from '../../components/shared/EmptyState/EmptyState'
-import Toast from '../../components/shared/Toast/Toast'
-import RequestDetailModal from '../../components/monitor/RequestDetailModal/RequestDetailModal'
-
-function RequestsPage() {
-  const { message, visible, showToast } = useToast()
-  const [requests, setRequests] = useState<IncomingRequest[]>(initialRequests)
-  const [selected, setSelected] = useState<IncomingRequest | null>(null)
-
-  const pending = requests.filter((r) => r.status === 'pendiente')
-  const accepted = requests.filter((r) => r.status === 'aceptada')
-
-  const respond = (status: 'aceptada' | 'rechazada', reason = '') => {
-    if (!selected) return
-    setRequests(requests.map((r) => (r.id === selected.id ? { ...r, status, rejectReason: reason } : r)))
-    showToast(`Solicitud de ${selected.student} ${status === 'aceptada' ? 'aceptada ✅' : 'rechazada'}`)
-    setSelected(null)
+import { useLista, request, id, nombre, dia, datos, mensajeError } from '../../services/tutoriaService'
+import type { Solicitud } from '../../services/tutoriaService'
+export default function RequestsPage() {
+  const remote = useLista<Solicitud>('/solicitudes', 'solicitudes')
+  const [selected, setSelected] = useState<Solicitud | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  async function respond(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!selected || busy) return
+    const form = datos(event.currentTarget); setBusy(true); setError(''); setMessage('')
+    try {
+      const result = await request(`/solicitudes/${encodeURIComponent(id(selected))}/estado`, 'PATCH', { estado: form.estado, respuestaMonitor: form.respuesta })
+      setMessage(result.mensaje || 'Respuesta guardada.'); setSelected(null); remote.refresh()
+    } catch (err) { setError(mensajeError(err)) } finally { setBusy(false) }
   }
-
-  const renderRow = (r: IncomingRequest, badge: 'pending' | 'ok') => (
-    <ListRow
-      key={r.id}
-      leading={<Avatar initials={r.initials} color={r.color} size={44} />}
-      title={r.student}
-      subtitle={`${r.subject} · ${r.date} · ${r.modality}`}
-      trailing={<StatusBadge tone={badge}>{badge === 'ok' ? 'Confirmada' : 'Pendiente'}</StatusBadge>}
-      onClick={() => setSelected(r)}
-    />
-  )
-
-  return (
-    <MonitorLayout>
-      <PageHero title="Solicitudes" description="Revisa el detalle de cada solicitud y decide si la aceptas o la rechazas." />
-
-      <div className="stack stack--lg" style={{ marginTop: 48 }}>
-        <Card title="Pendientes" subtitle={`${pending.length} por responder`}>
-          {pending.length === 0 ? (
-            <EmptyState title="Estás al día" message="No tienes solicitudes pendientes." />
-          ) : (
-            <div className="stack" style={{ gap: 12 }}>{pending.map((r) => renderRow(r, 'pending'))}</div>
-          )}
-        </Card>
-
-        <Card title="Confirmadas" subtitle={`${accepted.length} sesiones`}>
-          {accepted.length === 0 ? (
-            <EmptyState title="Sin sesiones confirmadas" message="Las solicitudes que aceptes aparecerán aquí." />
-          ) : (
-            <div className="stack" style={{ gap: 12 }}>{accepted.map((r) => renderRow(r, 'ok'))}</div>
-          )}
-        </Card>
-      </div>
-
-      {selected && (
-        <RequestDetailModal
-          request={selected}
-          onClose={() => setSelected(null)}
-          onAccept={() => respond('aceptada')}
-          onReject={(reason) => respond('rechazada', reason)}
-        />
-      )}
-
-      <Toast message={message} visible={visible} />
-    </MonitorLayout>
-  )
+  return <MonitorLayout><PageHero title="Solicitudes" description="Solicitudes recibidas y respuestas guardadas en el servidor." />
+    {message && <p role="status">{message}</p>}{error && <p role="alert">{error}</p>}
+    {remote.loading ? <p role="status">Cargando solicitudes...</p> : remote.error ? <div role="alert"><p>{remote.error}</p><button onClick={remote.refresh}>Reintentar</button></div> : <Card title="Solicitudes recibidas">
+      <button disabled={busy} onClick={remote.refresh}>Actualizar</button>
+      {!remote.items.length && <p>No tienes solicitudes.</p>}
+      {remote.items.map(s => <article key={id(s)} style={{ padding: '16px 0', borderBottom: '1px solid #ddd' }}><h3>{nombre(s.estudiante)} · {nombre(s.materia)}</h3><p>{s.tema}</p><p>{s.descripcion}</p><p>{s.modalidad} · {dia(s.fechaPreferida)} · {s.horaPreferida} · {s.duracionEstimadaHoras} horas</p><p>Estado: {s.estado}</p>{s.respuestaMonitor && <p>Tu respuesta: {s.respuestaMonitor}</p>}
+        {s.estado === 'Pendiente' && <button disabled={busy} onClick={() => { setSelected(s); setError('') }}>Responder</button>}
+        {s.estado === 'Aceptada' && <a href="/monitor/calendario">Ir al calendario para programar la sesión</a>}
+      </article>)}
+    </Card>}
+    {selected && <Card title={`Responder a ${nombre(selected.estudiante)}`}><form onSubmit={respond}><label>Respuesta <select name="estado"><option>Aceptada</option><option>Rechazada</option><option>Reprogramada</option></select></label><label>Mensaje al estudiante <textarea name="respuesta" maxLength={1000} /></label><p>Aceptar no crea una sesión automáticamente. La programación se realiza desde el calendario.</p><button disabled={busy} type="submit">{busy ? 'Guardando...' : 'Guardar respuesta'}</button><button disabled={busy} type="button" onClick={() => setSelected(null)}>Cancelar</button></form></Card>}
+  </MonitorLayout>
 }
-
-export default RequestsPage
