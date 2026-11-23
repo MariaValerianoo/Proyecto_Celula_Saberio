@@ -4,6 +4,7 @@ import type { Role, User } from '../types/auth'
 import { fetchSession } from '../services/authService'
 import { ROLE_HOME } from '../config/navigation'
 import StudentProfileFlow from '../components/estudiante/StudentProfileFlow'
+import MonitorProfileGate from '../components/monitor/MonitorProfileGate'
 export default function ProtectedRoute({ role }: { role: Role }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -21,5 +22,7 @@ export default function ProtectedRoute({ role }: { role: Role }) {
   if (error) return <div role="alert"><p>{error}</p><button onClick={() => setAttempt(v => v + 1)}>Reintentar</button></div>
   if (!user) return <Navigate to="/login" replace />
   if (user.role !== role) return <Navigate to={ROLE_HOME[user.role]} replace />
-  return role === 'estudiante' ? <StudentProfileFlow key={user.email}><Outlet /></StudentProfileFlow> : <Outlet />
+  if (role === 'estudiante') return <StudentProfileFlow key={user.email}><Outlet /></StudentProfileFlow>
+  if (role === 'monitor') return <MonitorProfileGate key={user.email}><Outlet /></MonitorProfileGate>
+  return <Outlet />
 }
