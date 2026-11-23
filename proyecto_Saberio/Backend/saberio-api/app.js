@@ -29,7 +29,13 @@ app.use('/api/soportes', (req, res, next) => {
     try {
       rutasSoportes = require('./src/routes/soporteAcademico.routes');
     } catch (error) {
-      console.error('No se pudo inicializar soportes:', error.code || error.name);
+      console.error('No se pudo inicializar soportes:', {
+        codigo: error.code,
+        operacion: error.syscall,
+        ruta: error.path,
+        mensaje: error.message,
+        stack: error.stack,
+      });
       return res.status(503).json({ error: { codigo: 'SOPORTES_INICIALIZACION_FALLIDA', mensaje: 'No se pudo iniciar el almacenamiento de soportes. Revisa los logs del backend. El inicio de sesión sigue siendo independiente.' } });
     }
   }
