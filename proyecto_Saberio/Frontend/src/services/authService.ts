@@ -1,4 +1,4 @@
-import type { RegisterData, User } from '../types/auth'
+import type { RegisterData, Role, User } from '../types/auth'
 import { ROLE_HOME } from '../config/navigation'
 
 export class ApiError extends Error {
@@ -17,9 +17,12 @@ export async function api(path: string, body?: unknown) {
   return data
 }
 function mapUser(usuario: { nombre: string; correo: string; roles: string[] }): User {
-  const role = (['admin', 'monitor', 'estudiante'] as const).find(r => usuario.roles.includes(r))
+  const roles = (['admin', 'monitor', 'estudiante'] as Role[]).filter(r => usuario.roles.includes(r))
+  const previous = getSession()
+  const preferred = previous?.email === usuario.correo ? previous.role : undefined
+  const role = preferred && roles.includes(preferred) ? preferred : roles[0]
   if (!role) throw new Error('La cuenta no tiene un rol compatible.')
-  return { name: usuario.nombre, email: usuario.correo, role }
+  return { name: usuario.nombre, email: usuario.correo, role, roles }
 }
 export async function login(email: string, password: string): Promise<User> {
   const data = await api('/auth/login', { correo: email.trim().toLowerCase(), contrasena: password })
@@ -53,6 +56,12 @@ export async function fetchSession(): Promise<User | null> {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) { clearSession(); return null }
     throw error
   }
+}
+export async function switchProfile(role: 'estudiante' | 'monitor') {
+  const user = await fetchSession()
+  if (!user?.roles?.includes('estudiante') || !user.roles.includes('monitor')) throw new Error('El cambio de perfil requiere ambos registros.')
+  saveSession({ ...user, role }, localStorage.getItem('usuario') !== null)
+  redirectByRole(role)
 }
 export function redirectByRole(role: User['role']) { window.location.href = ROLE_HOME[role] }
 export async function logout() {
