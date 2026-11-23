@@ -1,10 +1,8 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { Role } from '../types/auth'
 import { ROLE_COLOR, ROLE_LABEL } from '../config/navigation'
 import { getSession, logout } from '../services/authService'
 import { getInitials } from '../utils/format'
-import { useToast } from '../hooks/useToast'
 import { studentNotifications } from '../data/studentMock'
 import { monitorNotifications } from '../data/monitorMock'
 import { adminNotifications } from '../data/adminMock'
@@ -21,7 +19,6 @@ interface SettingsPageProps { role: Role }
 function SettingsPage({ role }: SettingsPageProps) {
   const navigate = useNavigate()
   const user = getSession()
-  const { message, visible, showToast } = useToast()
   const handleLogout = () => { logout(); navigate('/login') }
   return <DashboardLayout role={role} notifications={NOTIFICATIONS_BY_ROLE[role]}><PageHero title="Configuración" description="Administra tu cuenta y tu sesión. Las preferencias de notificaciones todavía no tienen persistencia en la API." />
     <div className="main-grid"><div className="stack stack--lg">
@@ -32,7 +29,6 @@ function SettingsPage({ role }: SettingsPageProps) {
     <aside className="stack side"><Card title="Tu cuenta" small><div style={{ display: 'flex', alignItems: 'center', gap: 14 }}><Avatar initials={getInitials(user?.name ?? '')} color={ROLE_COLOR[role]} size={56} /><div><b style={{ display: 'block', fontSize: 17 }}>{user?.name}</b><span style={{ fontSize: 14, color: 'var(--texto-suave)' }}>{user?.email}</span><div style={{ marginTop: 6 }}><StatusBadge tone="review">{ROLE_LABEL[role]}</StatusBadge></div></div></div></Card>
     <Card title="Sesión" small><div className="stack" style={{ gap: 10 }}><Button variant="secondary" onClick={handleLogout}>Cerrar sesión</Button></div></Card>
     </aside></div>
-    <Toast message={message} visible={visible} />
   </DashboardLayout>
 }
 export default SettingsPage
