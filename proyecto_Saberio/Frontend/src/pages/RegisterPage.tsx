@@ -7,145 +7,70 @@ import FormField from '../components/FormField/FormField'
 import RoleSelector from '../components/RoleSelector/RoleSelector'
 import Button from '../components/Button/Button'
 import Alert from '../components/Alert/Alert'
+import { register, requestVerification, confirmVerification } from '../services/authService'
 import { isInstitutionalEmail, isStrongPassword } from '../utils/validators'
-import { register } from '../services/authService'
 import type { SignUpRole } from '../types/auth'
 const logo = new URL('../assets/logo.png', import.meta.url).href
-
-interface FormErrors {
-  name?: string
-  email?: string
-  emailConfirm?: string
-  password?: string
-  passwordConfirm?: string
-  terms?: string
-}
-
-function RegisterPage() {
-  // Si llegó con ?rol=monitor desde la página de inicio, lo dejamos preseleccionado
-  const initialRole: SignUpRole =
-    new URLSearchParams(window.location.search).get('rol') === 'monitor' ? 'monitor' : 'estudiante'
-
+export default function RegisterPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [emailConfirm, setEmailConfirm] = useState('')
-  const [role, setRole] = useState<SignUpRole>(initialRole)
   const [password, setPassword] = useState('')
-  const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [role, setRole] = useState<SignUpRole>(new URLSearchParams(location.search).get('rol') === 'monitor' ? 'monitor' : 'estudiante')
   const [terms, setTerms] = useState(false)
-  const [errors, setErrors] = useState<FormErrors>({})
-  const [serverError, setServerError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [created, setCreated] = useState(false)
-
-  // Quita el error de un campo cuando el usuario lo vuelve a escribir
-  const clearError = (field: keyof FormErrors) =>
-    setErrors((prev) => ({ ...prev, [field]: undefined }))
-
-  const validate = (): FormErrors => {
-    const result: FormErrors = {}
-    if (name.trim().length < 3) result.name = 'Por favor ingresa tu nombre completo'
-    if (!isInstitutionalEmail(email)) result.email = 'Ingresa un correo institucional válido (@urosario.edu.co)'
-    if (email.trim() !== emailConfirm.trim()) result.emailConfirm = 'Los correos no coinciden'
-    if (!isStrongPassword(password)) result.password = 'Mínimo 8 caracteres, con una mayúscula y un número'
-    if (password !== passwordConfirm) result.passwordConfirm = 'Las contraseñas no coinciden'
-    if (!terms) result.terms = 'Debes aceptar los términos y condiciones'
-    return result
-  }
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setServerError('')
-    const found = validate()
-    setErrors(found)
-    if (Object.keys(found).length > 0) return
-
-    setLoading(true)
+  const [step, setStep] = useState<'register' | 'verify' | 'done'>('register')
+  const [code, setCode] = useState('')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [retryAt, setRetryAt] = useState(0)
+  async function submit(e: FormEvent) {
+    e.preventDefault(); setError(''); setBusy(true)
     try {
-      await register({ name: name.trim(), email: email.trim(), password, role })
-      setCreated(true)
-      setTimeout(() => { window.location.href = '/login' }, 3000)
-    } catch (err) {
-      setServerError(err instanceof Error ? err.message : 'Ocurrió un error')
-      setLoading(false)
-    }
+      if (step === 'register') {
+        if (name.trim().length < 2 || !isInstitutionalEmail(email)) throw new Error('Revisa el nombre y el correo institucional.')
+        if (email.trim().toLowerCase() !== emailConfirm.trim().toLowerCase()) throw new Error('Los correos no coinciden.')
+        if (!isStrongPassword(password) || password !== confirmation) throw new Error('Revisa la contraseña y su confirmación: mínimo 8 caracteres, una mayúscula y un número.')
+        if (!terms) throw new Error('Debes aceptar los términos y condiciones.')
+        const result = await register({ name, email, password, role })
+        setPassword(''); setConfirmation(''); setMessage(result.mensaje); setRetryAt(Date.now() + 60000); setStep('verify')
+      } else {
+        if (!/^\d{6}$/.test(code.trim())) throw new Error('Ingresa el código de seis dígitos.')
+        const result = await confirmVerification(email, code)
+        setCode(''); setMessage(result.mensaje); setStep('done')
+      }
+    } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo completar la solicitud.') }
+    finally { setBusy(false) }
   }
-
-  return (
-    <div className="page">
-      <Header brand="Saberio" logo={logo} subtitle="Universidad del Rosario" />
-
-      <main className="page__content">
-        <AuthCard
-          wide
-          title="Crea tu cuenta"
-          subtitle="Usa tu correo institucional de la Universidad del Rosario"
-          footer={<>¿Ya tienes cuenta? <a href="/login">Inicia sesión</a></>}
-        >
-          {created && (
-            <Alert
-              type="success"
-              title="✅ Cuenta creada exitosamente"
-              message={`Te enviamos un correo de verificación a ${email}. Revísalo y luego inicia sesión.`}
-            />
-          )}
-          {serverError && <Alert type="error" title="⚠️ No pudimos crear la cuenta" message={serverError} />}
-
-          {!created && (
-            <form onSubmit={handleSubmit} noValidate>
-              <FormField
-                id="nombre" label="Nombre completo" value={name}
-                onChange={(v) => { setName(v); clearError('name') }}
-                placeholder="Ej: Sofía Martínez" autoComplete="name" error={errors.name}
-              />
-              <FormField
-                id="email" label="Correo institucional" type="email" value={email}
-                onChange={(v) => { setEmail(v); clearError('email') }}
-                placeholder="ejemplo@urosario.edu.co" autoComplete="email"
-                help="Debe terminar en @urosario.edu.co" error={errors.email}
-              />
-              <FormField
-                id="email-conf" label="Confirmar correo" type="email" value={emailConfirm}
-                onChange={(v) => { setEmailConfirm(v); clearError('emailConfirm') }}
-                placeholder="ejemplo@urosario.edu.co" error={errors.emailConfirm}
-              />
-
-              <RoleSelector value={role} onChange={setRole} />
-
-              <FormField
-                id="password" label="Contraseña" type="password" value={password}
-                onChange={(v) => { setPassword(v); clearError('password') }}
-                placeholder="Mínimo 8 caracteres" autoComplete="new-password"
-                help="Usa al menos 8 caracteres, incluye mayúsculas y números" error={errors.password}
-              />
-              <FormField
-                id="password-conf" label="Confirmar contraseña" type="password" value={passwordConfirm}
-                onChange={(v) => { setPasswordConfirm(v); clearError('passwordConfirm') }}
-                placeholder="Repite tu contraseña" autoComplete="new-password" error={errors.passwordConfirm}
-              />
-
-              <div className="field">
-                <label className="terms">
-                  <input
-                    type="checkbox" checked={terms}
-                    onChange={(e) => { setTerms(e.target.checked); clearError('terms') }}
-                  />
-                  <span>Acepto los <a href="#">Términos y condiciones</a> y la <a href="#">Política de privacidad</a></span>
-                </label>
-                {errors.terms && <p className="field__error">{errors.terms}</p>}
-              </div>
-
-              <Button type="submit" fullWidth loading={loading} loadingText="Creando cuenta...">
-                Crear cuenta
-              </Button>
-            </form>
-          )}
-        </AuthCard>
-      </main>
-
-      <Footer />
-    </div>
-  )
+  async function resend() {
+    setError('')
+    if (Date.now() < retryAt) { setError('Espera al menos 60 segundos entre solicitudes.'); return }
+    setBusy(true)
+    try { const result = await requestVerification(email); setMessage(result.mensaje); setRetryAt(Date.now() + 60000) }
+    catch (err) { setError(err instanceof Error ? err.message : 'No se pudo solicitar el código.') }
+    finally { setBusy(false) }
+  }
+  return <div className="page"><Header brand="Saberio" logo={logo} subtitle="Universidad del Rosario" /><main className="page__content"><AuthCard wide title={step === 'register' ? 'Crea tu cuenta' : 'Verifica tu correo'} subtitle="Usa tu correo institucional" footer={<a href="/login">Ir a iniciar sesión</a>}>
+    {message && <Alert type="success" title="Estado de la cuenta" message={message} />}
+    {error && <Alert type="error" title="Revisa la solicitud" message={error} />}
+    {step !== 'done' && <form onSubmit={submit}>
+      {step === 'register' ? <>
+        <FormField id="nombre" label="Nombre completo" value={name} onChange={setName} autoComplete="name" />
+        <FormField id="email" label="Correo institucional" type="email" value={email} onChange={setEmail} autoComplete="email" />
+        <FormField id="email-confirm" label="Confirmar correo" type="email" value={emailConfirm} onChange={setEmailConfirm} />
+        <RoleSelector value={role} onChange={setRole} />
+        <FormField id="password" label="Contraseña" type="password" value={password} onChange={setPassword} autoComplete="new-password" />
+        <FormField id="password-confirm" label="Confirmar contraseña" type="password" value={confirmation} onChange={setConfirmation} autoComplete="new-password" />
+        <label className="terms"><input type="checkbox" checked={terms} onChange={e => setTerms(e.target.checked)} />Acepto los términos y condiciones y la política de privacidad.</label>
+      </> : <>
+        <p>Introduce el código recibido en {email}. No vuelvas a registrar la cuenta.</p>
+        <FormField id="codigo" label="Código de seis dígitos" value={code} onChange={setCode} autoComplete="one-time-code" />
+      </>}
+      <Button type="submit" fullWidth loading={busy}>{step === 'register' ? 'Crear cuenta' : 'Confirmar correo'}</Button>
+    </form>}
+    {step === 'verify' && <Button onClick={resend} loading={busy}>Reenviar código</Button>}
+    {step === 'register' && <button type="button" className="link-button" disabled={busy} onClick={() => { setStep('verify'); setError(''); setMessage('Introduce el correo de tu cuenta y solicita un código si lo necesitas.') }}>Ya tengo una cuenta pendiente de verificación</button>}
+    {step === 'verify' && <FormField id="correo-verificacion" label="Correo de la cuenta" type="email" value={email} onChange={v => { setEmail(v); setCode('') }} />}
+  </AuthCard></main><Footer /></div>
 }
-
-export default RegisterPage

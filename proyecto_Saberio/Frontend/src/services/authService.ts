@@ -1,48 +1,61 @@
 import type { RegisterData, User } from '../types/auth'
 import { ROLE_HOME } from '../config/navigation'
-const TEST_USERS = [
-  { name: 'Sofía Martínez', email: 'sofia.martinez@urosario.edu.co', password: '12345678', role: 'estudiante' },
-  { name: 'Carlos Ruiz', email: 'carlos.ruiz@urosario.edu.co', password: '12345678', role: 'monitor' },
-  { name: 'Administrador', email: 'admin@urosario.edu.co', password: 'admin123', role: 'admin' },
-] as const
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-export async function login(email: string, password: string): Promise<User> {
-  await wait(1000)
-  const found = TEST_USERS.find((u) => u.email === email && u.password === password)
-  if (!found) throw new Error('Correo o contraseña incorrectos.')
-  return { name: found.name, email: found.email, role: found.role }
+export class ApiError extends Error {
+  constructor(message: string, public status: number, public code?: string) { super(message) }
 }
-
-export async function register(data: RegisterData): Promise<void> {
-  await wait(1200)
-  if (TEST_USERS.some((u) => u.email === data.email)) {
-    throw new Error('Ya existe una cuenta con ese correo.')
+export async function api(path: string, body?: unknown) {
+  const response = await fetch(`/api${path}`, {
+    method: body === undefined ? 'GET' : 'POST',
+    credentials: 'include', cache: 'no-store',
+    headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  const data = await response.json().catch(() => null)
+  if (!response.ok) throw new ApiError(data?.error?.mensaje || data?.mensaje || 'No se pudo completar la solicitud.', response.status, data?.error?.codigo)
+  if (!data) throw new Error('La API no devolvió una respuesta válida.')
+  return data
+}
+function mapUser(usuario: { nombre: string; correo: string; roles: string[] }): User {
+  const role = (['admin', 'monitor', 'estudiante'] as const).find(r => usuario.roles.includes(r))
+  if (!role) throw new Error('La cuenta no tiene un rol compatible.')
+  return { name: usuario.nombre, email: usuario.correo, role }
+}
+export async function login(email: string, password: string): Promise<User> {
+  const data = await api('/auth/login', { correo: email.trim().toLowerCase(), contrasena: password })
+  return mapUser(data.usuario)
+}
+export async function register(data: RegisterData) {
+  return api('/auth/registro', { nombre: data.name.trim(), correo: data.email.trim().toLowerCase(), password: data.password, rol: data.role })
+}
+export const requestVerification = (correo: string) => api('/verificacion/solicitar', { correo: correo.trim().toLowerCase() })
+export const confirmVerification = (correo: string, codigo: string) => api('/verificacion/confirmar', { correo: correo.trim().toLowerCase(), codigo: codigo.trim() })
+export const sendRecoveryLink = (correo: string) => api('/auth/recuperar-contrasena', { correo: correo.trim().toLowerCase() })
+export const resetPassword = (correo: string, codigo: string, nuevaContrasena: string, confirmacionContrasena: string) => api('/auth/restablecer-contrasena', { correo: correo.trim().toLowerCase(), codigo: codigo.trim(), nuevaContrasena, confirmacionContrasena })
+function clearSession() { localStorage.removeItem('usuario'); sessionStorage.removeItem('usuario') }
+export function saveSession(user: User, remember: boolean) {
+  clearSession()
+  ;(remember ? localStorage : sessionStorage).setItem('usuario', JSON.stringify(user))
+}
+export function getSession(): User | null {
+  try {
+    const raw = sessionStorage.getItem('usuario') ?? localStorage.getItem('usuario')
+    return raw ? JSON.parse(raw) as User : null
+  } catch { clearSession(); return null }
+}
+export async function fetchSession(): Promise<User | null> {
+  try {
+    const data = await api('/auth/perfil')
+    const user = mapUser(data.usuario)
+    saveSession(user, localStorage.getItem('usuario') !== null)
+    return user
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) { clearSession(); return null }
+    throw error
   }
 }
-
-export async function sendRecoveryLink(email: string): Promise<void> {
-  await wait(800)
-  console.log('Enlace enviado a', email)
-}
-
-export function saveSession(user: User, remember: boolean) {
-  const storage = remember ? localStorage : sessionStorage
-  storage.setItem('usuario', JSON.stringify(user))
-}
-
-export function redirectByRole(role: User['role']) {
-  window.location.href = ROLE_HOME[role]
-}
-
-// Lee la sesión simulada (la guardó saveSession)
-export function getSession(): User | null {
-  const raw = localStorage.getItem('usuario') ?? sessionStorage.getItem('usuario')
-  return raw ? (JSON.parse(raw) as User) : null
-}
-
-export function logout() {
-  localStorage.removeItem('usuario')
-  sessionStorage.removeItem('usuario')
+export function redirectByRole(role: User['role']) { window.location.href = ROLE_HOME[role] }
+export async function logout() {
+  try { await api('/auth/logout', {}) ; clearSession() }
+  catch { window.alert('No se pudo cerrar la sesión en el servidor. Inténtalo de nuevo.') }
 }

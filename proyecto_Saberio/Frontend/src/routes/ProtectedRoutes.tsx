@@ -1,23 +1,24 @@
+import { useEffect, useState } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
-import type { Role } from '../types/auth'
-import { getSession } from '../services/authService'
+import type { Role, User } from '../types/auth'
+import { fetchSession } from '../services/authService'
 import { ROLE_HOME } from '../config/navigation'
-
-interface ProtectedRouteProps {
-  role: Role
-}
-
-function ProtectedRoute({ role }: ProtectedRouteProps) {
-  const user = getSession()
-
-  // Sin sesión: al login
+export default function ProtectedRoute({ role }: { role: Role }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let active = true
+    setLoading(true); setError('')
+    fetchSession().then(value => { if (active) setUser(value) })
+      .catch(() => { if (active) setError('No se pudo comprobar la sesión. Revisa tu conexión.') })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [attempt, role])
+  if (loading) return <p role="status">Comprobando sesión...</p>
+  if (error) return <div role="alert"><p>{error}</p><button onClick={() => setAttempt(v => v + 1)}>Reintentar</button></div>
   if (!user) return <Navigate to="/login" replace />
-
-  // Con otro rol: lo mandamos a su propia zona
   if (user.role !== role) return <Navigate to={ROLE_HOME[user.role]} replace />
-
-  // Todo bien: muestra las páginas hijas
   return <Outlet />
 }
-
-export default ProtectedRoute
