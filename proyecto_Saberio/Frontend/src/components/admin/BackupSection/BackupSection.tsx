@@ -1,25 +1,8 @@
-import { useState } from 'react'
 import Button from '../../Button/Button'
-
-function BackupSection() {
-  const [state, setState] = useState<'idle' | 'working' | 'done'>('idle')
-
-  const createBackup = () => {
-    setState('working')
-    setTimeout(() => setState('done'), 2000)   // simula que tarda 2 segundos
-  }
-
-  return (
-    <div>
-      <b>Respaldo de datos</b>
-      <p style={{ margin: '6px 0 10px', fontSize: 14 }}>
-        Último respaldo: <b>Hoy, 2:00 AM</b>. Próximo respaldo automático en 22 horas.
-      </p>
-      <Button variant="secondary" loading={state === 'working'} loadingText="Creando respaldo..." onClick={createBackup}>
-        {state === 'done' ? 'Respaldo creado ✅' : 'Crear respaldo ahora'}
-      </Button>
-    </div>
-  )
+export default function BackupSection() {
+  return <div>
+    <b>Respaldo de datos</b>
+    <p style={{ margin: '6px 0 10px', fontSize: 14 }}>La creación de respaldos desde la aplicación todavía no está implementada. Esta pantalla no puede confirmar la existencia ni la programación de respaldos de la base de datos.</p>
+    <Button variant="secondary" disabled>Respaldo desde la aplicación no disponible</Button>
+  </div>
 }
-
-export default BackupSection

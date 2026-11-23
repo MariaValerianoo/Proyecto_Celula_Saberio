@@ -1,64 +1,42 @@
-import { useMemo, useState } from 'react'
-import { getInitials, normalize } from '../../utils/format'
-import { platformUsers } from '../../data/adminMock'
+import { useEffect, useState } from 'react'
 import AdminLayout from '../../components/admin/AdminLayout/AdminLayout'
 import PageHero from '../../components/layout/PageHero/PageHero'
 import Card from '../../components/shared/Card/Card'
-import Avatar from '../../components/shared/Avatar/Avatar'
-import ListRow from '../../components/shared/ListRow/ListRow'
-import StatusBadge from '../../components/shared/StatusBadge/StatusBadge'
-import EmptyState from '../../components/shared/EmptyState/EmptyState'
-import FilterTabs from '../../components/shared/FilterTabs/FilterTabs'
 import FormField from '../../components/FormField/FormField'
-
-const ROLE_FILTERS = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'Estudiante', label: 'Estudiantes' },
-  { value: 'Monitor', label: 'Monitores' },
-]
-
-function UsersPage() {
-  const [role, setRole] = useState('todos')
+import { api } from '../../services/authService'
+interface Usuario { id: string; nombre: string; correo: string; roles: string[]; estadoCuenta: string; correoVerificado: boolean; acreditacionMonitor: string }
+export default function UsersPage() {
   const [search, setSearch] = useState('')
-
-  const users = useMemo(() => {
-    const term = normalize(search)
-    return platformUsers.filter(
-      (u) =>
-        (role === 'todos' || u.role === role) &&
-        (!term || normalize(u.name).includes(term) || normalize(u.email).includes(term)),
-    )
-  }, [role, search])
-
-  return (
-    <AdminLayout>
-      <PageHero title="Usuarios" description="Consulta a los estudiantes y monitores registrados en la plataforma." />
-
-      <div style={{ marginTop: 48 }}>
-        <Card title="Usuarios registrados" subtitle={`${users.length} resultado${users.length !== 1 ? 's' : ''}`}>
-          <FilterTabs label="Filtrar por rol" options={ROLE_FILTERS} value={role} onChange={setRole} />
-          <FormField id="buscar-usuario" label="Buscar por nombre o correo" value={search}
-            onChange={setSearch} placeholder="Ej: laura" />
-
-          {users.length === 0 ? (
-            <EmptyState title="Sin resultados" message="Prueba con otro nombre o cambia el filtro de rol." />
-          ) : (
-            <div className="stack" style={{ gap: 12 }}>
-              {users.map((u) => (
-                <ListRow
-                  key={u.id}
-                  leading={<Avatar initials={getInitials(u.name)} color={u.role === 'Monitor' ? 'purple' : 'primary'} size={44} />}
-                  title={u.name}
-                  subtitle={`${u.email} · ${u.career}`}
-                  trailing={<StatusBadge tone={u.role === 'Monitor' ? 'review' : 'info'}>{u.role}</StatusBadge>}
-                />
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
-    </AdminLayout>
-  )
+  const [role, setRole] = useState('')
+  const [page, setPage] = useState(1)
+  const [users, setUsers] = useState<Usuario[]>([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let active = true
+    setLoading(true); setError(''); setUsers([])
+    const timer = setTimeout(() => {
+      const query = new URLSearchParams({ pagina: String(page), limite: '25', buscar: search })
+      if (role) query.set('rol', role)
+      api(`/auth/admin/usuarios?${query}`).then(data => {
+        if (!Array.isArray(data.usuarios) || typeof data.total !== 'number') throw new Error('Respuesta de usuarios no válida.')
+        if (active) { setUsers(data.usuarios); setTotal(data.total) }
+      }).catch(err => { if (active) setError(err instanceof Error ? err.message : 'No se pudieron cargar los usuarios.') })
+        .finally(() => { if (active) setLoading(false) })
+    }, 300)
+    return () => { active = false; clearTimeout(timer) }
+  }, [search, role, page, attempt])
+  return <AdminLayout><PageHero title="Usuarios" description="Cuentas reales de la plataforma. Solo accesible para administradores." /><Card title="Usuarios registrados">
+    <FormField id="buscar-usuario" label="Buscar por nombre o correo" value={search} onChange={v => { setSearch(v); setPage(1) }} />
+    <label>Rol <select value={role} onChange={e => { setRole(e.target.value); setPage(1) }}><option value="">Todos</option><option value="estudiante">Estudiante</option><option value="monitor">Monitor</option><option value="admin">Administrador</option></select></label>
+    {loading ? <p role="status">Cargando usuarios...</p> : error ? <div role="alert"><p>{error}</p><button onClick={() => setAttempt(v => v + 1)}>Reintentar</button></div> : <>
+      <p>{total} resultados · Página {page}</p>
+      {!users.length && <p>No hay usuarios que coincidan con estos filtros.</p>}
+      {users.map(u => <article key={u.id} style={{ padding: '12px 0', borderBottom: '1px solid #ddd' }}><h3>{u.nombre}</h3><p>{u.correo}</p><p>Roles: {u.roles.join(', ')} · Cuenta: {u.estadoCuenta}</p><p>Correo: {u.correoVerificado ? 'Verificado' : 'Pendiente'} · Acreditación: {u.acreditacionMonitor}</p></article>)}
+      <button disabled={page <= 1} onClick={() => setPage(v => v - 1)}>Anterior</button>
+      <button disabled={page * 25 >= total} onClick={() => setPage(v => v + 1)}>Siguiente</button>
+    </>}
+  </Card></AdminLayout>
 }
-
-export default UsersPage
