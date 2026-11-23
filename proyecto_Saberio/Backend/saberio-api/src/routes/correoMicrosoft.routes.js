@@ -8,13 +8,16 @@ const {
 const router = express.Router();
 
 function validarTokenAutorizacion(req) {
-  const esperado =
-    process.env.MICROSOFT_AUTORIZACION_TOKEN;
+  const esperado = process.env.MICROSOFT_AUTORIZACION_TOKEN;
+  const recibido = req.get('x-autorizacion-correo');
 
-  if (
-    !esperado ||
-    req.get('x-autorizacion-correo') !== esperado
-  ) {
+  if (!esperado || recibido !== esperado) {
+    console.warn('Diagnostico autorizacion correo v1:', {
+      variableConfigurada: Boolean(esperado),
+      encabezadoRecibido: Boolean(recibido),
+      coinciden: Boolean(esperado) && recibido === esperado,
+      coincidenSinEspacios: Boolean(esperado && recibido) && recibido.trim() === esperado.trim(),
+    });
     throw new HttpError(
       401,
       'Autorización de correo no válida.',
@@ -24,20 +27,19 @@ function validarTokenAutorizacion(req) {
 }
 
 router.get('/autorizar', async (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
   try {
     validarTokenAutorizacion(req);
-
     const url = await iniciarAutorizacion();
-
-    res.status(200).json({
-      autorizacion: url,
-    });
+    res.status(200).json({ autorizacion: url });
   } catch (error) {
     next(error);
   }
 });
 
 router.get('/callback', async (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  res.set('Referrer-Policy', 'no-referrer');
   try {
     if (req.query.error) {
       throw new HttpError(
@@ -46,12 +48,10 @@ router.get('/callback', async (req, res, next) => {
         'AUTORIZACION_RECHAZADA'
       );
     }
-
     await completarAutorizacion({
       estado: req.query.state,
       codigo: req.query.code,
     });
-
     res.status(200).json({
       mensaje: 'Cuenta remitente autorizada correctamente.',
     });
