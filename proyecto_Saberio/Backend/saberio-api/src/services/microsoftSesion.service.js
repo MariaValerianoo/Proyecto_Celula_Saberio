@@ -1,8 +1,14 @@
-const crypto = require('node:crypto');
+const { ConfidentialClientApplication } = require('@azure/msal-node');
+const SesionMicrosoft = require('../../models/sesionMicrosoft.model');
+const {
+  obtenerConfiguracionMicrosoft,
+} = require('../../config/microsoft');
+const {
+  cifrarTexto,
+  descifrarTexto,
+} = require('../utils/cifrado');
 
-const MARGEN_VENCIMIENTO_MS = 60 * 1000;
-
-let sesion = null;
+let cliente = null;
 
 function crearError(mensaje, codigo) {
   const error = new Error(mensaje);
@@ -10,121 +16,117 @@ function crearError(mensaje, codigo) {
   return error;
 }
 
-function copiarSesion(valor) {
-  return {
-    cuenta: { ...valor.cuenta },
-    token: {
-      ...valor.token,
-      expiresOn: new Date(valor.expiraEn),
-      scopes: [...valor.token.scopes],
+async function obtenerCliente() {
+  if (cliente) {
+    return cliente;
+  }
+
+  const configuracion = obtenerConfiguracionMicrosoft();
+
+  cliente = new ConfidentialClientApplication({
+    auth: {
+      clientId: configuracion.clientId,
+      clientSecret: configuracion.clientSecret,
+      authority:
+        'https://login.microsoftonline.com/consumers',
     },
-    expiraEn: valor.expiraEn,
-  };
+  });
+
+  const registro = await SesionMicrosoft.findOne({
+    cuenta: configuracion.remitente,
+  });
+
+  if (registro?.cacheCifrada) {
+    try {
+      const cache = descifrarTexto(registro.cacheCifrada);
+      cliente.getTokenCache().deserialize(cache);
+    } catch {
+      await SesionMicrosoft.deleteOne({
+        cuenta: configuracion.remitente,
+      });
+    }
+  }
+
+  return cliente;
 }
 
-function limpiarSesionExpirada() {
-  if (
-    sesion &&
-    Date.now() >= sesion.expiraEn - MARGEN_VENCIMIENTO_MS
-  ) {
-    sesion = null;
-  }
-}
+async function guardarCache() {
+  const configuracion = obtenerConfiguracionMicrosoft();
+  const cache = cliente.getTokenCache().serialize();
 
-function guardarSesion({ cuenta, token } = {}) {
-  if (
-    !cuenta ||
-    typeof cuenta !== 'object' ||
-    typeof cuenta.homeAccountId !== 'string' ||
-    !cuenta.homeAccountId.trim() ||
-    typeof cuenta.username !== 'string' ||
-    !cuenta.username.trim()
-  ) {
+  const cuentas = await cliente.getTokenCache().getAllAccounts();
+  const cuenta = cuentas.find(
+    (item) =>
+      item.username?.trim().toLowerCase() ===
+      configuracion.remitente
+  );
+
+  if (!cuenta) {
     throw crearError(
-      'La cuenta Microsoft no es válida.',
-      'CUENTA_MICROSOFT_INVALIDA',
+      'No se encontró la cuenta remitente autorizada.',
+      'CUENTA_REMITENTE_NO_ENCONTRADA'
     );
   }
 
-  if (
-    !token ||
-    typeof token !== 'object' ||
-    typeof token.accessToken !== 'string' ||
-    !token.accessToken.trim()
-  ) {
-    throw crearError(
-      'El token Microsoft no es válido.',
-      'TOKEN_MICROSOFT_INVALIDO',
-    );
-  }
-
-  const fechaVencimiento = token.expiresOn;
-
-  if (
-    !(fechaVencimiento instanceof Date) ||
-    !Number.isFinite(fechaVencimiento.getTime())
-  ) {
-    throw crearError(
-      'El token Microsoft no tiene un vencimiento válido.',
-      'VENCIMIENTO_MICROSOFT_INVALIDO',
-    );
-  }
-
-  const expiraEn = fechaVencimiento.getTime();
-
-  if (expiraEn <= Date.now() + MARGEN_VENCIMIENTO_MS) {
-    throw crearError(
-      'El token Microsoft está vencido o próximo a vencer.',
-      'TOKEN_MICROSOFT_VENCIDO',
-    );
-  }
-
-  sesion = {
-    cuenta: {
-      ...cuenta,
-      username: cuenta.username.trim().toLowerCase(),
+  await SesionMicrosoft.updateOne(
+    { cuenta: configuracion.remitente },
+    {
+      $set: {
+        cuenta: configuracion.remitente,
+        homeAccountId: cuenta.homeAccountId,
+        cacheCifrada: cifrarTexto(cache),
+      },
     },
-    token: {
-      accessToken: token.accessToken,
-      scopes: Array.isArray(token.scopes)
-        ? token.scopes.filter((scope) => typeof scope === 'string')
-        : [],
-    },
-    expiraEn,
-  };
+    { upsert: true }
+  );
 }
 
-function obtenerSesion() {
-  limpiarSesionExpirada();
+async function obtenerToken() {
+  const configuracion = obtenerConfiguracionMicrosoft();
+  const clienteActual = await obtenerCliente();
+  const cache = clienteActual.getTokenCache();
 
-  return sesion ? copiarSesion(sesion) : null;
+  const cuentas = await cache.getAllAccounts();
+  const cuenta = cuentas.find(
+    (item) =>
+      item.username?.trim().toLowerCase() ===
+      configuracion.remitente
+  );
+
+  if (!cuenta) {
+    throw crearError(
+      'La cuenta remitente de Microsoft aún no ha sido autorizada.',
+      'SESION_MICROSOFT_AUSENTE'
+    );
+  }
+
+  const resultado = await clienteActual.acquireTokenSilent({
+    account: cuenta,
+    scopes: configuracion.scopes,
+  });
+
+  await guardarCache();
+
+  return resultado.accessToken;
 }
 
-function obtenerCuentaAutorizada() {
-  const actual = obtenerSesion();
+async function estaAutorizada() {
+  const configuracion = obtenerConfiguracionMicrosoft();
+  const clienteActual = await obtenerCliente();
+  const cuentas = await clienteActual
+    .getTokenCache()
+    .getAllAccounts();
 
-  return actual ? actual.cuenta : null;
-}
-
-function estaAutorizada() {
-  limpiarSesionExpirada();
-
-  return sesion !== null;
-}
-
-function cerrarSesion() {
-  sesion = null;
-}
-
-function generarEstado() {
-  return crypto.randomBytes(32).toString('hex');
+  return cuentas.some(
+    (item) =>
+      item.username?.trim().toLowerCase() ===
+      configuracion.remitente
+  );
 }
 
 module.exports = {
-  guardarSesion,
-  obtenerSesion,
-  obtenerCuentaAutorizada,
+  obtenerCliente,
+  guardarCache,
+  obtenerToken,
   estaAutorizada,
-  cerrarSesion,
-  generarEstado,
 };
