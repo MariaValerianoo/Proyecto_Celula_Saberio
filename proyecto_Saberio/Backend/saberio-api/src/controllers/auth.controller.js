@@ -14,7 +14,7 @@ async function registrar(req, res) {
 
   res.status(201).json({
     mensaje:
-      'Cuenta creada con correo pendiente de verificación. El envío del código todavía no está implementado.',
+      'Cuenta creada con correo pendiente de verificación. Solicita un código de verificación para confirmar tu correo.',
     usuario,
   });
 }

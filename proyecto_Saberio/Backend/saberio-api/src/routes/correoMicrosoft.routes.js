@@ -12,12 +12,6 @@ function validarTokenAutorizacion(req) {
   const recibido = req.get('x-autorizacion-correo');
 
   if (!esperado || recibido !== esperado) {
-    console.warn('Diagnostico autorizacion correo v1:', {
-      variableConfigurada: Boolean(esperado),
-      encabezadoRecibido: Boolean(recibido),
-      coinciden: Boolean(esperado) && recibido === esperado,
-      coincidenSinEspacios: Boolean(esperado && recibido) && recibido.trim() === esperado.trim(),
-    });
     throw new HttpError(
       401,
       'Autorización de correo no válida.',
