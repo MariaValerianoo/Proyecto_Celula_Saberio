@@ -1,4 +1,5 @@
 const servicio = require('../services/auth.service');
+const { emitirCodigo } = require('../services/verificacionCorreo.service');
 const {
   generarTokenSesion,
 } = require('../utils/jwt');
@@ -12,10 +13,21 @@ async function registrar(req, res) {
     res.locals.registro
   );
 
+  let envioSolicitado = false;
+  try {
+    const emision = await emitirCodigo(usuario.correo);
+    envioSolicitado = Boolean(emision);
+  } catch {
+    // La cuenta ya existe: permitir reintentar el envío sin repetir el registro.
+    console.warn('No se pudo completar el envio automatico de verificacion tras el registro.');
+  }
+
   res.status(201).json({
-    mensaje:
-      'Cuenta creada con correo pendiente de verificación. Solicita un código de verificación para confirmar tu correo.',
+    mensaje: envioSolicitado
+      ? 'Cuenta creada con correo pendiente de verificación. Se solicitó el envío de un código a tu correo; revisa también la carpeta de spam.'
+      : 'Cuenta creada con correo pendiente de verificación. No se pudo completar el envío automático del código. Espera al menos 60 segundos y solicita un código de verificación sin volver a registrar la cuenta.',
     usuario,
+    verificacion: { envioSolicitado },
   });
 }
 
