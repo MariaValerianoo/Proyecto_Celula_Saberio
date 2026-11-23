@@ -23,7 +23,18 @@ app.use('/api/disponibilidad', require('./src/routes/disponibilidad.routes'));
 app.use('/api/publicaciones', require('./src/routes/publicacion.routes'));
 app.use('/api/busqueda', require('./src/routes/busqueda.routes'));
 app.use('/api/admin', require('./src/routes/admin.routes'));
-app.use('/api/soportes', require('./src/routes/soporteAcademico.routes'));
+let rutasSoportes;
+app.use('/api/soportes', (req, res, next) => {
+  if (!rutasSoportes) {
+    try {
+      rutasSoportes = require('./src/routes/soporteAcademico.routes');
+    } catch (error) {
+      console.error('No se pudo inicializar soportes:', error.code || error.name);
+      return res.status(503).json({ error: { codigo: 'SOPORTES_INICIALIZACION_FALLIDA', mensaje: 'No se pudo iniciar el almacenamiento de soportes. Revisa los logs del backend. El inicio de sesión sigue siendo independiente.' } });
+    }
+  }
+  return rutasSoportes(req, res, next);
+});
 const { rutaNoEncontrada, manejarErrores } = require('./src/middlewares/manejarErrores');
 app.use(rutaNoEncontrada);
 app.use(manejarErrores);
