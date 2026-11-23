@@ -1,6 +1,6 @@
 const {
   enviarCorreo,
-} = require('../services/correoMicrosoft.service');
+} = require('../src/services/correoMicrosoft.service');
 
 async function enviarCorreoSaberio(
   destinatario,
