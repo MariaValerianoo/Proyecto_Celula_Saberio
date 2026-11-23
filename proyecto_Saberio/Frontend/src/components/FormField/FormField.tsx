@@ -1,46 +1,29 @@
-import type { ChangeEvent } from 'react'
-// @ts-ignore - Vite gestiona las importaciones de hojas de estilo.
+import type { InputHTMLAttributes } from 'react'
 import './FormField.css'
 
-interface FormFieldProps {
+interface FormFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'id'> {
   id: string
   label: string
-  value: string
-  onChange: (value: string) => void
-  type?: 'text' | 'email' | 'password'
-  placeholder?: string
-  autoComplete?: string
+  onChange?: (value: string) => void
   help?: string
   error?: string
 }
 
-function FormField({
-  id,
-  label,
-  value,
-  onChange,
-  type = 'text',
-  placeholder,
-  autoComplete,
-  help,
-  error,
-}: FormFieldProps) {
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value)
-
+function FormField({ id, label, onChange, type = 'text', help, error, ...inputProps }: FormFieldProps) {
+  const description = [inputProps['aria-describedby'], error ? `${id}-error` : help ? `${id}-help` : ''].filter(Boolean).join(' ') || undefined
   return (
     <div className={`field ${error ? 'field--error' : ''}`}>
       <label htmlFor={id}>{label}</label>
       <input
+        {...inputProps}
         id={id}
         type={type}
-        value={value}
-        onChange={handleChange}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        aria-invalid={Boolean(error)}
+        onChange={onChange ? event => onChange(event.target.value) : undefined}
+        aria-invalid={Boolean(error) || inputProps['aria-invalid']}
+        aria-describedby={description}
       />
-      {help && !error && <p className="field__help">{help}</p>}
-      {error && <p className="field__error">{error}</p>}
+      {help && !error && <p id={`${id}-help`} className="field__help">{help}</p>}
+      {error && <p id={`${id}-error`} className="field__error">{error}</p>}
     </div>
   )
 }
