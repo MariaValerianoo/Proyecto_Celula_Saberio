@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 
 const authRouter = require('./src/routes/auth.routes');
 const rutasVerificacionCorreo = require('./src/routes/verificacionCorreo.routes');
+const rutasCorreoMicrosoft = require('./src/routes/correoMicrosoft.routes');
 const rutasMateria = require('./src/routes/materia.routes');
 const rutasPerfilEstudiante = require('./src/routes/perfilEstudiante.routes');
 const rutasPerfilMonitor = require('./src/routes/perfilMonitor.routes');
@@ -43,6 +44,7 @@ app.get('/api/salud', (req, res) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/verificacion', rutasVerificacionCorreo);
+app.use('/api/correo/microsoft', rutasCorreoMicrosoft);
 app.use('/api/materias', rutasMateria);
 app.use('/api/perfiles/estudiante', rutasPerfilEstudiante);
 app.use('/api/perfiles/monitor', rutasPerfilMonitor);

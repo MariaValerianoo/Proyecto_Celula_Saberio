@@ -1,6 +1,4 @@
-const {
-  ConfidentialClientApplication,
-} = require('@azure/msal-node');
+const { ConfidentialClientApplication } = require('@azure/msal-node');
 
 let clienteMicrosoft;
 
@@ -28,12 +26,19 @@ function obtenerConfiguracionMicrosoft() {
     );
   }
 
-  const callbackEsperado =
+  const callbackLocal =
     'http://localhost:3000/api/correo/microsoft/callback';
+  const callbackProduccion =
+    'https://saberio-api.vercel.app/api/correo/microsoft/callback';
 
-  if (redirectUri !== callbackEsperado) {
+  const callbackPermitido =
+    process.env.NODE_ENV === 'production'
+      ? callbackProduccion
+      : callbackLocal;
+
+  if (redirectUri !== callbackPermitido) {
     throw new Error(
-      'Para esta etapa local, MICROSOFT_REDIRECT_URI debe coincidir con el callback configurado'
+      'MICROSOFT_REDIRECT_URI no coincide con el callback configurado para este entorno.'
     );
   }
 
@@ -48,6 +53,10 @@ function obtenerConfiguracionMicrosoft() {
     clientSecret,
     redirectUri,
     remitente,
+    scopes: [
+      'https://graph.microsoft.com/Mail.Send',
+      'offline_access',
+    ],
   };
 }
 
@@ -59,8 +68,6 @@ function obtenerClienteMicrosoft() {
       auth: {
         clientId: configuracion.clientId,
         clientSecret: configuracion.clientSecret,
-
-        // La cuenta remitente será una cuenta personal Microsoft.
         authority:
           'https://login.microsoftonline.com/consumers',
       },
@@ -70,12 +77,7 @@ function obtenerClienteMicrosoft() {
   return clienteMicrosoft;
 }
 
-const MICROSOFT_SCOPES = Object.freeze([
-  'https://graph.microsoft.com/Mail.Send',
-]);
-
 module.exports = {
   obtenerConfiguracionMicrosoft,
   obtenerClienteMicrosoft,
-  MICROSOFT_SCOPES,
 };

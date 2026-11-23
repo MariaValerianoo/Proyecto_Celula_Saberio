@@ -1,25 +1,20 @@
-const nodemailer = require('nodemailer');
+const {
+  enviarCorreo,
+} = require('../services/correoMicrosoft.service');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: Number(process.env.SMTP_PORT) === 465,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  },
-});
-
-async function enviarCorreo(destinatario, asunto, html) {
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM,
-    to: destinatario,
-    subject: asunto,
+async function enviarCorreoSaberio(
+  destinatario,
+  asunto,
+  html
+) {
+  return enviarCorreo({
+    destinatario,
+    asunto,
     html,
   });
 }
 
 module.exports = {
-  transporter,
-  enviarCorreo,
+  transporter: null,
+  enviarCorreo: enviarCorreoSaberio,
 };
