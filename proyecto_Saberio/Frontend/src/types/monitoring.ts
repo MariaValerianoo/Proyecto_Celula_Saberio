@@ -67,6 +67,7 @@ export interface SessionRequestForm {
 }
 export interface Publication {
   id: number
+  materiaId: string
   subject: string
   description: string
   modality: Modality
@@ -75,7 +76,7 @@ export interface Publication {
   active: boolean
 }
 
-export type PublicationForm = Omit<Publication, 'id' | 'active'>
+export type PublicationForm = Omit<Publication, 'id' | 'active' | 'subject'>
 
 export type RequestStatus = 'pendiente' | 'aceptada' | 'rechazada'
 
