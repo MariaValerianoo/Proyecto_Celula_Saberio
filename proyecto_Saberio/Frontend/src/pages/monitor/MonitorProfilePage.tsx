@@ -6,7 +6,7 @@ import MonitorLayout from '../../components/monitor/MonitorLayout/MonitorLayout'
 import PageHero from '../../components/layout/PageHero/PageHero'
 import Card from '../../components/shared/Card/Card'
 import Button from '../../components/Button/Button'
-import useSoportesMateria from '../../components/monitor/useSoportesMateria'
+import SoportesMateria from '../../components/monitor/SoportesMateria'
 import { useMaterias, request, id, mensajeError } from '../../services/tutoriaService'
 import type { Ref } from '../../services/tutoriaService'
 interface Perfil {
@@ -25,7 +25,6 @@ const field: CSSProperties = { display: 'grid', gap: 8 }
 export default function MonitorProfilePage({ initial = false, onSaved }: { initial?: boolean; onSaved?: () => void } = {}) {
   const navigate = useNavigate()
   const materias = useMaterias()
-  const soportes = useSoportesMateria()
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -53,13 +52,11 @@ export default function MonitorProfilePage({ initial = false, onSaved }: { initi
     setError('')
     const body = { biografia: String(form.get('biografia') || '').trim(), experienciaAcademica: String(form.get('experiencia') || '').trim(), enfoqueEnsenanza: String(form.get('enfoque') || '').trim(), materiasOfrecidas: selected, tarifaPorHora: Number(form.get('tarifa')), modalidades: form.getAll('modalidades').map(String), disponibilidadHoraria: String(form.get('disponibilidad') || '').trim() }
     if (!perfilCompleto(body)) { setError('Completa los textos con las longitudes indicadas, elige al menos una materia y una modalidad, y revisa la tarifa.'); return }
-    try { soportes.validate(selected) } catch (err) { setError(mensajeError(err)); return }
     setBusy(true)
     try {
       const result = await request('/perfiles/monitor', 'PUT', body)
       if (!perfilCompleto(result.perfil)) throw new Error('El servidor no devolvió un perfil completo. Reintenta el guardado.')
       setPerfil(result.perfil)
-      await soportes.upload(selected)
       onSaved?.()
       navigate('/monitor', { replace: true })
     } catch (err) { setError(mensajeError(err)) } finally { setBusy(false) }
@@ -71,7 +68,7 @@ export default function MonitorProfilePage({ initial = false, onSaved }: { initi
       {loading ? <Card title="Perfil"><p role="status">Cargando perfil...</p></Card> : loadError ? <Card title="Perfil"><p role="alert">{loadError}</p><Button onClick={() => setRevision(v => v + 1)}>Reintentar</Button></Card> : <Card title="Datos del monitor">
         <form onSubmit={save} style={{ display: 'grid', gap: 20 }}>
           <p>{getSession()?.name} · {getSession()?.email}</p>
-          <p>Completar el perfil no equivale a su aprobación. La disponibilidad para reservas se publica desde el calendario.</p>
+          <p>Completa y guarda tu perfil para habilitar la carga de soportes. La disponibilidad para reservas se publica desde el calendario.</p>
           {error && <p role="alert">{error}</p>}
           <fieldset disabled={busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'grid', gap: 20 }}>
             <label style={field}>Biografía (20 a 1000 caracteres) *<textarea style={control} rows={3} name="biografia" required minLength={20} maxLength={1000} defaultValue={perfil?.biografia || ''} /></label>
@@ -80,14 +77,16 @@ export default function MonitorProfilePage({ initial = false, onSaved }: { initi
             <div style={field}><span>Materias ofrecidas (elige al menos una) *</span>
               {materias.loading ? <p role="status">Cargando materias...</p> : materias.error ? <div><p role="alert">{materias.error}</p><Button type="button" onClick={materias.refresh}>Reintentar materias</Button></div> : materias.items.length === 0 ? <div><p>No hay materias disponibles. Solicita al administrador que registre el catálogo.</p><Button type="button" onClick={materias.refresh}>Actualizar materias</Button></div> : <div style={{ display: 'grid', gap: 10, maxHeight: 240, overflowY: 'auto' }}>{materias.items.map(m => <label key={id(m)} style={{ display: 'flex', gap: 10, alignItems: 'center' }}><input type="checkbox" checked={selected.includes(id(m))} onChange={e => setSelected(previous => e.target.checked ? [...previous, id(m)] : previous.filter(value => value !== id(m)))} />{m.nombre} ({m.codigo})</label>)}</div>}
             </div>
-            {soportes.render(selected, materias.items, busy)}
             <label style={field}>Tarifa por hora *<input style={control} type="number" name="tarifa" min={0} max={1000000} step={0.01} defaultValue={perfil?.tarifaPorHora ?? ''} required /></label>
             <label style={field}>Modalidades (selecciona al menos una) *<select style={control} name="modalidades" multiple required defaultValue={perfil?.modalidades || []}><option>Presencial</option><option>Virtual</option><option>Ambas</option></select></label>
             <label style={field}>Disponibilidad habitual (10 a 500 caracteres) *<textarea style={control} rows={3} name="disponibilidad" required minLength={10} maxLength={500} defaultValue={perfil?.disponibilidadHoraria || ''} /></label>
-            <div><Button type="submit" disabled={busy || selected.length === 0}>{busy ? 'Guardando perfil y soportes...' : 'Guardar y continuar'}</Button></div>
+            <div><Button type="submit" disabled={busy || selected.length === 0}>{busy ? 'Guardando perfil...' : 'Guardar perfil'}</Button></div>
           </fieldset>
         </form>
       </Card>}
+      <Card title="Soportes académicos">
+        <SoportesMateria materiasSeleccionadas={selected} materias={materias.items} />
+      </Card>
     </div>
   </MonitorLayout>
 }
