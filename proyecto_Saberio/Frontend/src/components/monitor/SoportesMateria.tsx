@@ -1,97 +1,69 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import Button from '../Button/Button'
 import { request, id, nombre, mensajeError } from '../../services/tutoriaService'
-import type { Ref } from '../../services/tutoriaService'
-
-const control: CSSProperties = { width: '100%', boxSizing: 'border-box', padding: 12, border: '1px solid #dcdbea', borderRadius: 12, font: 'inherit', background: '#fff', color: 'inherit' }
-const field: CSSProperties = { display: 'grid', gap: 8 }
-
-interface Soporte { id?: string; _id?: string; materia: Ref; tipoDocumento: string; estado: string; observacionesAdmin?: string; createdAt?: string }
-
-interface Props {
-  materiasSeleccionadas: string[]
-  materias: Array<Record<string, unknown>>
-  disabled?: boolean
-}
-
+import type { Materia, Ref } from '../../services/tutoriaService'
+import './SoportesMateria.css'
+interface Soporte { id?: string; _id?: string; materia: Ref; tipoDocumento: string; estado: string; nombreOriginal?: string; observacionesAdmin?: string }
+interface Props { materiasSeleccionadas: string[]; materias: Materia[]; disabled?: boolean }
 export default function SoportesMateria({ materiasSeleccionadas, materias, disabled = false }: Props) {
-  const [tipo, setTipo] = useState<'Documento de identidad' | 'Soporte académico'>('Soporte académico')
+  const [tipo, setTipo] = useState('Soporte académico')
   const [archivos, setArchivos] = useState<Record<string, File | null>>({})
-  const [subiendo, setSubiendo] = useState(false)
-  const [mensaje, setMensaje] = useState('')
+  const [busy, setBusy] = useState('')
+  const lock = useRef(false)
+  const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [soportes, setSoportes] = useState<Soporte[]>([])
-  const [cargando, setCargando] = useState(true)
+  const [saved, setSaved] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [ready, setReady] = useState(false)
   const [revision, setRevision] = useState(0)
-  const inputRef = useRef<HTMLInputElement | null>(null)
-
+  const [versions, setVersions] = useState<Record<string, number>>({})
   useEffect(() => {
-    let activo = true
-    setCargando(true); setError('')
-    request('/soportes/propios').then(data => {
-      if (activo) setSoportes(Array.isArray(data.soportes) ? data.soportes : [])
-    }).catch(err => { if (activo) setError(mensajeError(err)) })
-      .finally(() => { if (activo) setCargando(false) })
-    return () => { activo = false }
+    let active = true
+    setLoading(true); setReady(false); setError('')
+    Promise.all([request('/soportes/propios'), request('/perfiles/monitor')]).then(([data, profile]) => {
+      if (!Array.isArray(data.soportes)) throw new Error('Respuesta de soportes no válida.')
+      if (active) { setSoportes(data.soportes); setSaved((profile.perfil?.materiasOfrecidas || []).map((m: Ref) => id(m))); setReady(true) }
+    }).catch(err => { if (active) setError(mensajeError(err)) }).finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [revision])
-
-  function validar(archivo: File | null | undefined) {
-    if (!archivo) return 'Selecciona un archivo PDF, PNG o JPG.'
-    const permitidos = ['application/pdf', 'image/png', 'image/jpeg']
-    if (!permitidos.includes(archivo.type)) return 'El archivo debe ser PDF, PNG o JPG.'
-    if (archivo.size > 10 * 1024 * 1024) return 'El archivo no puede superar 10 MB.'
-    return ''
-  }
-
-  async function subir(materiaId: string) {
-    const archivo = archivos[materiaId]
-    const fallo = validar(archivo)
-    if (fallo) { setError(fallo); return }
-    setSubiendo(true); setError(''); setMensaje('')
+  async function subir(materia: string) {
+    if (lock.current || disabled || !ready || !saved.includes(materia)) return
+    const file = archivos[materia]
+    if (!file || !['application/pdf', 'image/png', 'image/jpeg'].includes(file.type) || !file.size || file.size > 5 * 1024 * 1024) { setError('Selecciona un PDF, PNG o JPG de hasta 5 MB y que no esté vacío.'); return }
+    lock.current = true; setBusy(materia); setError(''); setMessage('')
     try {
-      const datos = new FormData()
-      datos.append('tipoDocumento', tipo)
-      datos.append('materia', materiaId)
-      datos.append('archivo', archivo as File)
-      const respuesta = await fetch('/api/soportes', { method: 'POST', credentials: 'include', cache: 'no-store', body: datos })
-      const resultado = await respuesta.json().catch(() => null)
-      if (!respuesta.ok) throw new Error(resultado?.error?.mensaje || resultado?.mensaje || 'No se pudo cargar el soporte.')
-      setMensaje(resultado.mensaje || 'Soporte cargado correctamente.')
-      setArchivos(prev => ({ ...prev, [materiaId]: null }))
-      if (inputRef.current) inputRef.current.value = ''
-      setRevision(valor => valor + 1)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cargar el soporte.')
-    } finally { setSubiendo(false) }
+      const body = new FormData()
+      body.append('tipoDocumento', tipo); body.append('materia', materia); body.append('archivo', file)
+      const response = await fetch('/api/soportes', { method: 'POST', credentials: 'include', cache: 'no-store', body })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error?.mensaje || data?.mensaje || `No se pudo cargar el soporte (${response.status}).`)
+      if (!data?.soporte) throw new Error('El servidor no confirmó la carga. Actualiza la lista antes de reintentar.')
+      setMessage('Soporte recibido. Está pendiente de revisión por el administrador.')
+      setArchivos(prev => ({ ...prev, [materia]: null }))
+      setVersions(prev => ({ ...prev, [materia]: (prev[materia] || 0) + 1 }))
+      setRevision(prev => prev + 1)
+    } catch (err) { setError(mensajeError(err)) }
+    finally { lock.current = false; setBusy('') }
   }
-
-  const materiasVisibles = materias.filter(m => materiasSeleccionadas.includes(id(m)))
-
-  return <div style={field}>
-    <span>Soportes por materia</span>
-    <p>Sube un PDF, PNG o JPG de máximo 10 MB. El soporte queda pendiente hasta que un administrador lo revise; subirlo no aprueba automáticamente la materia.</p>
-    <label style={field}>Tipo de documento
-      <select style={control} value={tipo} onChange={e => setTipo(e.target.value as typeof tipo)} disabled={disabled || subiendo}>
-        <option>Soporte académico</option>
-        <option>Documento de identidad</option>
-      </select>
-    </label>
-    {mensaje && <p role="status">{mensaje}</p>}
-    {error && <p role="alert">{error}</p>}
-    {!materiasVisibles.length && <p>Selecciona al menos una materia para poder cargar su soporte.</p>}
-    {materiasVisibles.map(materia => {
-      const materiaId = id(materia)
-      const archivo = archivos[materiaId]
-      const propios = soportes.filter(s => id(s.materia) === materiaId)
-      return <div key={materiaId} style={{ border: '1px solid #e5e4ef', borderRadius: 14, padding: 16, display: 'grid', gap: 10 }}>
-        <b>{nombre(materia)}</b>
-        <input ref={materiaId === materiasVisibles[0] ? inputRef : undefined} type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" disabled={disabled || subiendo} onChange={e => setArchivos(prev => ({ ...prev, [materiaId]: e.target.files?.[0] ?? null }))} />
-        {archivo && <small>{archivo.name} · {(archivo.size / 1024 / 1024).toFixed(2)} MB</small>}
-        <button type="button" disabled={disabled || subiendo || !archivo} onClick={() => subir(materiaId)}>{subiendo ? 'Subiendo...' : 'Cargar soporte'}</button>
-        {cargando ? <small>Cargando soportes...</small> : propios.length > 0 && <div style={{ display: 'grid', gap: 6 }}>
-          {propios.map(s => <small key={id(s)}>• {s.tipoDocumento} · {s.estado}{s.observacionesAdmin ? ` · ${s.observacionesAdmin}` : ''}</small>)}
-        </div>}
-      </div>
-    })}
-  </div>
+  const visibles = materias.filter(m => materiasSeleccionadas.includes(id(m)))
+  return <section className="soportes-materia" aria-label="Carga de soportes académicos">
+    <div className="soportes-materia__intro"><span className="soportes-materia__icon" aria-hidden="true">↑</span><div><h3>Acredita tus materias</h3><p>Adjunta tus documentos para que el administrador pueda revisarlos. PDF, PNG o JPG · Máximo 5 MB por archivo.</p></div></div>
+    <div className="soportes-materia__toolbar"><label>Tipo de documento<select value={tipo} disabled={disabled || !!busy} onChange={e => setTipo(e.target.value)}><option>Soporte académico</option><option>Documento de identidad</option></select></label><Button variant="secondary" disabled={loading || !!busy} onClick={() => setRevision(v => v + 1)}>Actualizar soportes</Button></div>
+    {message && <div className="soportes-materia__notice" role="status">{message}</div>}
+    {error && <div className="soportes-materia__notice soportes-materia__notice--error" role="alert">{error}</div>}
+    {loading && <p role="status">Consultando tus soportes y materias guardadas...</p>}
+    {!visibles.length && <div className="soportes-materia__empty">Selecciona y guarda tus materias en el perfil para comenzar.</div>}
+    <div className="soportes-materia__grid">{visibles.map(m => {
+      const key = id(m)
+      const file = archivos[key]
+      const enabled = ready && saved.includes(key)
+      return <article key={key} className="soportes-materia__card"><header><h4>{nombre(m)}</h4><span className="soportes-materia__tag">Soporte por materia</span></header>
+        {!loading && !enabled && <p>Guarda primero el perfil con esta materia y después actualiza los soportes.</p>}
+        <label className={`soportes-materia__upload ${!enabled || !!busy ? 'is-disabled' : ''}`}><span className="soportes-materia__upload-icon" aria-hidden="true">↑</span><strong>{file ? 'Archivo seleccionado' : 'Seleccionar documento'}</strong><span>{file ? file.name : 'PDF, PNG o JPG de hasta 5 MB'}</span>{file && <small>{(file.size / 1024 / 1024).toFixed(2)} MB</small>}<input key={versions[key] || 0} type="file" aria-label={`Seleccionar soporte para ${nombre(m)}`} accept=".pdf,.png,.jpg,.jpeg" disabled={disabled || !!busy || !enabled} onChange={e => { setError(''); setArchivos(prev => ({ ...prev, [key]: e.target.files?.[0] || null })) }} /></label>
+        <div className="soportes-materia__actions"><Button disabled={disabled || !!busy || !file || !enabled} loading={busy === key} loadingText="Subiendo documento..." onClick={() => subir(key)}>Cargar soporte</Button></div>
+        <ul className="soportes-materia__list">{soportes.filter(s => id(s.materia) === key).map(s => <li key={id(s)}><div><span>{s.nombreOriginal || s.tipoDocumento}</span><span className={`soportes-materia__status ${s.estado === 'Aprobado' ? 'is-approved' : s.estado === 'Rechazado' ? 'is-rejected' : ''}`}>{s.estado}</span></div>{s.observacionesAdmin && <p>{s.observacionesAdmin}</p>}</li>)}</ul>
+      </article>
+    })}</div>
+  </section>
 }
