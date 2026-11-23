@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getInitials } from '../../utils/format'
 import { useToast } from '../../hooks/useToast'
-import { initialSubjects, initialSupports, platformStats, platformUsers, recentActivity } from '../../data/adminMock'
+import { useLista, request, id, nombre, mensajeError } from '../../services/tutoriaService'
+import type { Materia, Soporte } from '../../services/tutoriaService'
 import AdminLayout from '../../components/admin/AdminLayout/AdminLayout'
 import PageHero from '../../components/layout/PageHero/PageHero'
 import Button from '../../components/Button/Button'
@@ -18,8 +20,22 @@ import SystemStatus from '../../components/admin/SystemStatus'
 function AdminHomePage() {
   const navigate = useNavigate()
   const { message, visible, showToast } = useToast()
-  const pendingSupports = initialSupports.filter((s) => s.status === 'pendiente')
-  const activeSubjects = initialSubjects.filter((s) => s.active).length
+  const materias = useLista<Materia>('/materias', 'materias')
+  const soportes = useLista<Soporte>('/soportes', 'soportes')
+  const [usuarios, setUsuarios] = useState<{ total: number; monitores: number } | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    request('/admin/usuarios?pagina=1&limite=1').then(data => {
+      if (typeof data.total !== 'number') throw new Error('Respuesta de usuarios no válida.')
+      if (active) setUsuarios({ total: data.total, monitores: data.total })
+    }).catch(err => { if (active) setError(mensajeError(err)) })
+    return () => { active = false }
+  }, [])
+
+  const pendientes = soportes.items.filter(s => s.estado === 'Pendiente')
+  const activas = materias.items.filter(m => m.activa).length
 
   return (
     <AdminLayout>
@@ -30,30 +46,34 @@ function AdminHomePage() {
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 28 }}>
           <Button onClick={() => navigate('/admin/materias?nueva=1')}>+ Nueva materia</Button>
-          <Button variant="secondary" onClick={() => showToast('Próximamente: reportes')}>Ver reportes</Button>
+          <Button variant="secondary" onClick={() => showToast('Los reportes estarán disponibles cuando se implementen.')}>Ver reportes</Button>
         </div>
       </PageHero>
 
       <div className="main-grid">
         <div className="stack stack--lg">
           <div className="stats-grid stats-grid--4">
-            <StatCard value={platformStats.users.toLocaleString('es-CO')} label="Usuarios totales" />
-            <StatCard value={platformStats.monitors} label="Monitores activos" />
-            <StatCard value={activeSubjects} label="Materias activas" />
-            <StatCard value={platformStats.sessionsMonth} label="Monitorías este mes" />
+            <StatCard value={usuarios ? usuarios.total.toLocaleString('es-CO') : '—'} label="Usuarios totales" />
+            <StatCard value="—" label="Monitores activos" />
+            <StatCard value={materias.loading ? '—' : activas} label="Materias activas" />
+            <StatCard value="—" label="Monitorías este mes" />
           </div>
 
-          <Card title="Soportes académicos pendientes" subtitle={`${pendingSupports.length} por verificar`}>
-            {pendingSupports.length === 0 ? (
+          <Card title="Soportes académicos pendientes" subtitle={soportes.loading ? 'Cargando...' : `${pendientes.length} por verificar`}>
+            {soportes.error ? (
+              <EmptyState title="No se pudieron cargar los soportes" message={soportes.error} />
+            ) : soportes.loading ? (
+              <p role="status">Cargando soportes...</p>
+            ) : pendientes.length === 0 ? (
               <EmptyState title="Todo verificado 🎉" message="No hay soportes pendientes." />
             ) : (
               <div className="stack" style={{ gap: 12 }}>
-                {pendingSupports.map((s) => (
+                {pendientes.slice(0, 4).map((s) => (
                   <ListRow
-                    key={s.id}
-                    leading={<Avatar initials={getInitials(s.monitor)} color="purple" size={44} />}
-                    title={s.monitor}
-                    subtitle={`${s.kind} · ${s.subject}`}
+                    key={id(s)}
+                    leading={<Avatar initials={getInitials(nombre(s.monitor))} color="purple" size={44} />}
+                    title={nombre(s.monitor)}
+                    subtitle={`${s.tipoDocumento} · ${nombre(s.materia)}`}
                     trailing={<StatusBadge tone="pending">Pendiente</StatusBadge>}
                   />
                 ))}
@@ -64,18 +84,25 @@ function AdminHomePage() {
             </p>
           </Card>
 
-          <Card title="Usuarios recientes">
-            <div className="stack" style={{ gap: 12 }}>
-              {platformUsers.slice(0, 4).map((u) => (
-                <ListRow
-                  key={u.id}
-                  leading={<Avatar initials={getInitials(u.name)} color={u.role === 'Monitor' ? 'purple' : 'primary'} size={44} />}
-                  title={u.name}
-                  subtitle={`${u.role} · ${u.career}`}
-                  trailing={<StatusBadge tone="info">{u.date}</StatusBadge>}
-                />
-              ))}
-            </div>
+          <Card title="Materias del catálogo">
+            {materias.error ? (
+              <EmptyState title="No se pudieron cargar las materias" message={materias.error} />
+            ) : materias.loading ? (
+              <p role="status">Cargando materias...</p>
+            ) : materias.items.length === 0 ? (
+              <EmptyState title="Sin materias" message="Aún no hay materias registradas." />
+            ) : (
+              <div className="stack" style={{ gap: 12 }}>
+                {materias.items.slice(0, 4).map((m) => (
+                  <ListRow
+                    key={id(m)}
+                    title={`${m.nombre} (${m.codigo})`}
+                    subtitle={`${m.facultad} · ${m.creditos} créditos`}
+                    trailing={<StatusBadge tone={m.activa ? 'ok' : 'urgent'}>{m.activa ? 'Activa' : 'Inactiva'}</StatusBadge>}
+                  />
+                ))}
+              </div>
+            )}
           </Card>
         </div>
 
@@ -90,22 +117,22 @@ function AdminHomePage() {
           </Card>
 
           <Card title="Actividad reciente" small>
-            <ActivityList items={recentActivity} />
+            <ActivityList items={[]} />
           </Card>
 
           <Card title="Estado del sistema" small>
             <SystemStatus
               items={[
-                { label: 'Usuarios en línea', value: 24, tone: 'ok' },
-                { label: 'Solicitudes pendientes', value: 5, tone: 'pending' },
-                { label: 'Soportes por verificar', value: pendingSupports.length, tone: 'review' },
-                { label: 'Último respaldo', value: 'Hoy 2:00 AM' },
+                { label: 'Soportes por verificar', value: soportes.loading ? '—' : pendientes.length, tone: soportes.loading ? undefined : (pendientes.length ? 'review' : 'ok') },
+                { label: 'Materias activas', value: materias.loading ? '—' : activas, tone: materias.loading ? undefined : 'ok' },
+                { label: 'Usuarios totales', value: usuarios ? usuarios.total : '—' },
               ]}
             />
           </Card>
         </aside>
       </div>
 
+      {error && <p role="alert">{error}</p>}
       <Toast message={message} visible={visible} />
     </AdminLayout>
   )

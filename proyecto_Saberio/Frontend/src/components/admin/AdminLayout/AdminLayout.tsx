@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import DashboardLayout from '../../layout/DashboardLayout/DashboardLayout'
-import { adminNotifications } from '../../../data/adminMock'
 
 interface AdminLayoutProps {
   children: ReactNode
@@ -8,7 +7,7 @@ interface AdminLayoutProps {
 
 function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <DashboardLayout role="admin" notifications={adminNotifications}>
+    <DashboardLayout role="admin" notifications={[]}>
       {children}
     </DashboardLayout>
   )

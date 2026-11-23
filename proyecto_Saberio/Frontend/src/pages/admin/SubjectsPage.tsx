@@ -5,7 +5,10 @@ import AdminLayout from '../../components/admin/AdminLayout/AdminLayout'
 import PageHero from '../../components/layout/PageHero/PageHero'
 import Card from '../../components/shared/Card/Card'
 import StatusBadge from '../../components/shared/StatusBadge/StatusBadge'
+import EmptyState from '../../components/shared/EmptyState/EmptyState'
 import Toast from '../../components/shared/Toast/Toast'
+import Button from '../../components/Button/Button'
+import FormField from '../../components/FormField/FormField'
 import { useLista, request, id, datos, mensajeError } from '../../services/tutoriaService'
 import type { Materia } from '../../services/tutoriaService'
 const FACULTADES = ['Ingeniería', 'Economía', 'Matemáticas', 'Derecho']
@@ -33,13 +36,13 @@ export default function SubjectsPage() {
     } catch (err) { setError(mensajeError(err)) } finally { setBusy(false) }
   }
   const editing = selected && selected !== 'new' ? selected as Materia : null
-  return <AdminLayout><PageHero title="Gestión de materias" description="Catálogo real de materias disponible para monitores y estudiantes."><button onClick={() => { setSelected('new'); setError('') }}>+ Nueva materia</button></PageHero>
+  return <AdminLayout><PageHero title="Gestión de materias" description="Catálogo real de materias disponible para monitores y estudiantes."><Button onClick={() => { setSelected('new'); setError('') }}>+ Nueva materia</Button></PageHero>
     {message && <p role="status">{message}</p>}{error && <p role="alert">{error}</p>}
-    {remote.loading ? <p role="status">Cargando materias...</p> : remote.error ? <div role="alert"><p>{remote.error}</p><button onClick={remote.refresh}>Reintentar</button></div> : <Card title="Catálogo" subtitle={`${remote.items.length} materias`}>
-      {!remote.items.length && <p>Aún no hay materias.</p>}
-      {remote.items.map(m => <article key={id(m)} style={{ padding: '16px 0', borderBottom: '1px solid #ddd' }}><h3>{m.nombre} ({m.codigo})</h3><p>{m.facultad} · {m.creditos} créditos</p><StatusBadge tone={m.activa ? 'ok' : 'urgent'}>{m.activa ? 'Activa' : 'Inactiva'}</StatusBadge><div><button disabled={busy} onClick={() => { setSelected(m); setError('') }}>Editar</button><button disabled={busy} onClick={() => toggle(m)}>{m.activa ? 'Desactivar' : 'Activar'}</button></div></article>)}
+    {remote.loading ? <p role="status">Cargando materias...</p> : remote.error ? <Card title="Materias"><EmptyState title="No se pudieron cargar las materias" message={remote.error} /><Button onClick={remote.refresh}>Reintentar</Button></Card> : <Card title="Catálogo" subtitle={`${remote.items.length} materias`}>
+      {!remote.items.length && <EmptyState title="Aún no hay materias" message="Crea la primera materia del catálogo." />}
+      {remote.items.map(m => <article key={id(m)} style={{ padding: '16px 0', borderBottom: '1px solid #ddd' }}><h3>{m.nombre} ({m.codigo})</h3><p>{m.facultad} · {m.creditos} créditos</p><StatusBadge tone={m.activa ? 'ok' : 'urgent'}>{m.activa ? 'Activa' : 'Inactiva'}</StatusBadge><div><Button variant="secondary" disabled={busy} onClick={() => { setSelected(m); setError('') }}>Editar</Button><Button variant="secondary" disabled={busy} onClick={() => toggle(m)}>{m.activa ? 'Desactivar' : 'Activar'}</Button></div></article>)}
     </Card>}
-    {selected && <Card title={editing ? 'Editar materia' : 'Nueva materia'}><form key={id(editing) || 'nueva'} onSubmit={save}><label>Nombre <input name="nombre" required minLength={3} maxLength={120} defaultValue={editing?.nombre || ''} /></label><label>Código <input name="codigo" required minLength={2} maxLength={20} defaultValue={editing?.codigo || ''} /></label><label>Facultad <select name="facultad" defaultValue={editing?.facultad || ''} required><option value="">Selecciona</option>{FACULTADES.map(f => <option key={f}>{f}</option>)}</select></label><label>Créditos <input type="number" name="creditos" min={1} max={6} step={1} defaultValue={editing?.creditos || 3} required /></label><button type="submit" disabled={busy}>{busy ? 'Guardando...' : 'Guardar materia'}</button><button type="button" disabled={busy} onClick={() => setSelected(null)}>Cancelar</button></form></Card>}
+    {selected && <Card title={editing ? 'Editar materia' : 'Nueva materia'}><form key={id(editing) || 'nueva'} onSubmit={save}><FormField id="nombre" label="Nombre" name="nombre" required minLength={3} maxLength={120} defaultValue={editing?.nombre || ''} /><FormField id="codigo" label="Código" name="codigo" required minLength={2} maxLength={20} defaultValue={editing?.codigo || ''} /><label>Facultad <select name="facultad" defaultValue={editing?.facultad || ''} required><option value="">Selecciona</option>{FACULTADES.map(f => <option key={f}>{f}</option>)}</select></label><FormField id="creditos" label="Créditos" name="creditos" type="number" min={1} max={6} step={1} defaultValue={editing?.creditos || 3} required /><div><Button type="submit" disabled={busy}>{busy ? 'Guardando...' : 'Guardar materia'}</Button><Button variant="secondary" disabled={busy} onClick={() => setSelected(null)}>Cancelar</Button></div></form></Card>}
     <Toast message={message} visible={Boolean(message)} />
   </AdminLayout>
 }

@@ -1,50 +1,46 @@
-import type { SessionStatus } from './monitoring'
-
-export type SupportStatus = 'pendiente' | 'aprobado' | 'rechazado'
-
 export interface SupportDoc {
-  id: number
+  id: string
   monitor: string
   email: string
   subject: string
   kind: string
   date: string
-  status: SupportStatus
-  rejectReason?: string
+  status: string
+  fileName: string
+  fileSize?: number
+  downloadUrl: string
+}
+
+export interface ActivityItem {
+  id: string | number
+  text: string
+  time: string
+}
+
+export interface AdminSession {
+  id: string | number
+  student: string
+  monitor: string
+  subject: string
+  date: string
+  status: string
+  rating?: number | null
+}
+
+export interface PlatformUser {
+  id: string | number
+  name: string
+  email: string
+  role: string
+  career: string
+  date: string
 }
 
 export interface Subject {
-  id: number
+  id: string | number
   code: string
   name: string
   faculty: string
   credits: number
   active: boolean
-}
-
-export type SubjectForm = Omit<Subject, 'id' | 'active'>
-
-export interface PlatformUser {
-  id: number
-  name: string
-  email: string
-  role: 'Estudiante' | 'Monitor'
-  career: string
-  date: string
-}
-
-export interface AdminSession {
-  id: number
-  student: string
-  monitor: string
-  subject: string
-  date: string
-  status: SessionStatus
-  rating: number | null
-}
-
-export interface ActivityItem {
-  id: number
-  text: string
-  time: string
 }
