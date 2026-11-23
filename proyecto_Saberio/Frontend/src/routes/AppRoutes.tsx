@@ -7,6 +7,7 @@ import StudentHomePage from '../pages/estudiantes/StudentHomePage.tsx'
 import MyMonitoringsPage from '../pages/estudiantes/MyMonitoratingPages.tsx'
 import StudentHistoryPage from '../pages/estudiantes/StudentHistoryPage'
 import MonitorHomePage from '../pages/monitor/MonitorHomePage'
+import MonitorProfilePage from '../pages/monitor/MonitorProfilePage'
 import PublicationsPage from '../pages/monitor/PublicationsPage'
 import RequestsPage from '../pages/monitor/RequestsPage'
 import CalendarPage from '../pages/monitor/CalendarPage'
@@ -32,6 +33,7 @@ export default function AppRoutes() {
     </Route>
     <Route path="/monitor" element={<ProtectedRoute role="monitor" />}>
       <Route index element={<MonitorHomePage />} />
+      <Route path="perfil" element={<MonitorProfilePage />} />
       <Route path="publicaciones" element={<PublicationsPage />} />
       <Route path="solicitudes" element={<RequestsPage />} />
       <Route path="calendario" element={<CalendarPage />} />
