@@ -6,6 +6,7 @@ import Button from '../Button/Button'
 import Alert from '../Alert/Alert'
 import { sendRecoveryLink, resetPassword } from '../../services/authService'
 import { isInstitutionalEmail, isStrongPassword } from '../../utils/validators'
+import './ForgotPassword.css'
 export default function ForgotPasswordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -31,17 +32,21 @@ export default function ForgotPasswordModal({ open, onClose }: { open: boolean; 
     finally { setBusy(false) }
   }
   return <Modal open={open} title="Recuperar contraseña" onClose={close} footer={<Button onClick={close}>{step === 'done' ? 'Volver al login' : 'Cerrar'}</Button>}>
-    {message && <Alert type="success" title="Estado de la solicitud" message={message} />}
-    {error && <Alert type="error" title="Revisa los datos" message={error} />}
-    {step !== 'done' && <form onSubmit={submit}>
-      {step === 'request' ? <FormField id="recovery-email" label="Correo institucional" type="email" value={email} onChange={setEmail} /> : <>
-        <p>Introduce el código enviado a {email} y tu nueva contraseña.</p>
-        <FormField id="recovery-code" label="Código de seis dígitos" value={code} onChange={setCode} autoComplete="one-time-code" />
-        <FormField id="new-password" label="Nueva contraseña" type="password" value={password} onChange={setPassword} autoComplete="new-password" />
-        <FormField id="confirm-password" label="Confirmar contraseña" type="password" value={confirmation} onChange={setConfirmation} autoComplete="new-password" />
-      </>}
-      <Button type="submit" loading={busy}>{step === 'request' ? 'Solicitar código' : 'Actualizar contraseña'}</Button>
-    </form>}
-    {step === 'reset' && <button type="button" className="link-button" disabled={busy} onClick={() => { setStep('request'); setCode(''); setPassword(''); setConfirmation(''); setMessage(''); setError('') }}>Cambiar correo o solicitar otro código</button>}
+    <div className="forgot-password__form">
+      {message && <Alert type="success" title="Estado de la solicitud" message={message} />}
+      {error && <Alert type="error" title="Revisa los datos" message={error} />}
+      {step !== 'done' && <form onSubmit={submit}>
+        {step === 'request' ? <FormField id="recovery-email" label="Correo institucional" type="email" value={email} onChange={setEmail} /> : <>
+          <p>Introduce el código enviado a {email} y tu nueva contraseña.</p>
+          <FormField id="recovery-code" label="Código de seis dígitos" value={code} onChange={setCode} autoComplete="one-time-code" />
+          <FormField id="new-password" label="Nueva contraseña" type="password" value={password} onChange={setPassword} autoComplete="new-password" />
+          <FormField id="confirm-password" label="Confirmar contraseña" type="password" value={confirmation} onChange={setConfirmation} autoComplete="new-password" />
+        </>}
+        <div className="forgot-password__actions">
+          <Button type="submit" loading={busy}>{step === 'request' ? 'Solicitar código' : 'Actualizar contraseña'}</Button>
+          {step === 'reset' && <button type="button" className="link-button" disabled={busy} onClick={() => { setStep('request'); setCode(''); setPassword(''); setConfirmation(''); setMessage(''); setError('') }}>Cambiar correo o solicitar otro código</button>}
+        </div>
+      </form>}
+    </div>
   </Modal>
 }
