@@ -1,1 +1,1 @@
-Añade tipo PropuestaReprogramacion y funciones cancelarMonitoriaEstudiante, proponerReprogramacion y listarPropuestasReprogramacion usando request existente.
+Restaura el servicio completo existente y añade PropuestaReprogramacion, cancelarMonitoriaEstudiante, proponerReprogramacion y listarPropuestasReprogramacion.
