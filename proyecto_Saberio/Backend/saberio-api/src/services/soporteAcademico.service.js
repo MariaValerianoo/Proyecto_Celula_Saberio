@@ -112,4 +112,15 @@ async function eliminar(id, idMonitor) {
   await SoporteAcademico.findByIdAndDelete(id);
   return publico(soporte);
 }
-module.exports = { crear, listar, listarPropios, obtenerPorId, descargar, revisar, eliminar };
+const internas = require('./notificacionInterna.service');
+async function crearConNotificacion(...args) {
+  const soporte = await crear(...args);
+  await internas.seguro(internas.nuevoSoporte, soporte);
+  return soporte;
+}
+async function revisarConNotificacion(...args) {
+  const soporte = await revisar(...args);
+  await internas.seguro(internas.revisionSoporte, soporte);
+  return soporte;
+}
+module.exports = { crear: crearConNotificacion, listar, listarPropios, obtenerPorId, descargar, revisar: revisarConNotificacion, eliminar };

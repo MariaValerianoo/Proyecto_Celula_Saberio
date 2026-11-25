@@ -1,0 +1,10 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { solicitud, soporte } = require('../src/utils/eventosNotificacion');
+const s = { _id: '507f1f77bcf86cd799439011', monitor: 'monitor', estudiante: 'estudiante', tema: 'Tema', createdAt: new Date(), fechaRespuesta: new Date() };
+test('nueva solicitud para monitor, respuesta para estudiante', () => { assert.equal(solicitud(s).usuario, 'monitor'); assert.equal(solicitud({ ...s, estado: 'Aceptada' }, true).usuario, 'estudiante'); });
+test('eventos tienen identificadores estables', () => { assert.equal(solicitud(s).evento, solicitud(s).evento); assert.notEqual(solicitud(s).evento, solicitud({ ...s, estado: 'Aceptada' }, true).evento); });
+test('no inventa respuestas de solicitudes', () => { assert.equal(solicitud({ ...s, estado: 'Pendiente' }, true), null); });
+test('aceptada éxito, rechazada y reprogramada advertencia', () => { assert.equal(solicitud({ ...s, estado: 'Aceptada' }, true).type, 'success'); for (const estado of ['Rechazada', 'Reprogramada']) assert.equal(solicitud({ ...s, estado }, true).type, 'warning'); });
+test('soportes conservan identificadores históricos', () => { assert.equal(soporte(s, 'admin').evento, `carga_${s._id}`); assert.equal(soporte({ ...s, estado: 'Aprobado' }, 'monitor', true).evento, `revision_${s._id}_Aprobado`); });
+test('soporte pendiente no genera aviso de revisión', () => { assert.equal(soporte({ ...s, estado: 'Pendiente' }, 'monitor', true), null); });

@@ -1,5 +1,5 @@
 export interface AppNotification {
-  id: number
+  id: number | string
   type: 'request' | 'success' | 'warning'
   title: string
   text: string

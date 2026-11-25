@@ -62,6 +62,7 @@ const usuarioSchema = new Schema(
         },
       ],
     },
+    notificacionesInternas: { type: Boolean, default: true },
     notificacionesCorreo: {
       type: Boolean,
       default: true,

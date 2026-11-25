@@ -1,44 +1,47 @@
 const { Router } = require('express');
-const { Schema, model, models } = require('mongoose');
-const Soporte = require('../../models/soporteAcademico.model');
+const Notificacion = require('../../models/notificacion.model');
+const Usuario = require('../../models/usuario.model');
 const autenticar = require('../middlewares/autenticar');
-const Lectura = models.LecturaNotificacion || model('LecturaNotificacion', new Schema({
-  _id: String,
-  usuario: { type: Schema.Types.ObjectId, ref: 'Usuario', required: true, index: true },
-  evento: { type: String, required: true },
-  fecha: { type: Date, default: Date.now },
-}, { collection: 'lecturas_notificaciones', versionKey: false }));
+const HttpError = require('../utils/HttpError');
 const router = Router();
 router.use(autenticar);
-async function eventos(usuario) {
-  const avisos = [];
-  if (usuario.roles.includes('admin')) {
-    const soportes = await Soporte.find().select('monitor materia tipoDocumento estado createdAt').populate('monitor', 'nombre').populate('materia', 'nombre').sort({ createdAt: -1, _id: -1 }).limit(50).lean();
-    for (const s of soportes) avisos.push({ evento: `carga_${s._id}`, type: 'request', title: 'Nuevo soporte académico', text: `${s.monitor?.nombre || 'Monitor'} cargó un soporte de ${s.materia?.nombre || 'una materia'}.`, details: `Monitor: ${s.monitor?.nombre || 'No disponible'}\nMateria: ${s.materia?.nombre || 'No disponible'}\nDocumento: ${s.tipoDocumento}\nEstado actual: ${s.estado}`, href: '/admin/soportes', fecha: s.createdAt });
-  }
-  if (usuario.roles.includes('monitor')) {
-    const soportes = await Soporte.find({ monitor: usuario.id, estado: { $in: ['Aprobado', 'Rechazado'] } }).select('materia estado observacionesAdmin fechaRevision updatedAt').populate('materia', 'nombre').sort({ fechaRevision: -1, _id: -1 }).limit(50).lean();
-    for (const s of soportes) avisos.push({ evento: `revision_${s._id}_${s.estado}`, type: s.estado === 'Aprobado' ? 'success' : 'warning', title: s.estado === 'Aprobado' ? 'Soporte aprobado' : 'Soporte rechazado', text: `${s.materia?.nombre || 'Tu materia'}: ${s.estado === 'Aprobado' ? 'ya puedes publicar esta materia.' : 'revisa las observaciones y carga un documento corregido.'}`, details: `Materia: ${s.materia?.nombre || 'No disponible'}\nResultado: ${s.estado}\nObservaciones: ${s.observacionesAdmin || 'Sin observaciones'}`, href: s.estado === 'Aprobado' ? '/monitor/publicaciones?nueva=1' : '/monitor/perfil', fecha: s.fechaRevision || s.updatedAt });
-  }
-  return avisos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 100);
-}
-router.get('/', async (req, res, next) => {
-  try {
-    const avisos = await eventos(req.usuario);
-    const lecturas = await Lectura.find({ usuario: req.usuario.id, evento: { $in: avisos.map(a => a.evento) } }).select('evento').lean();
-    const leidos = new Set(lecturas.map(l => l.evento));
-    res.set('Cache-Control', 'private, no-store');
-    res.json({ notificaciones: avisos.map((a, i) => ({ ...a, id: i + 1, read: leidos.has(a.evento), time: a.fecha ? new Date(a.fecha).toISOString() : '' })) });
-  } catch (error) { next(error); }
-});
-router.patch('/leer', async (req, res, next) => {
-  try {
-    const ids = req.body?.eventos;
-    if (!Array.isArray(ids) || !ids.length || ids.length > 100 || ids.some(id => typeof id !== 'string' || id.length > 100)) return res.status(400).json({ error: { mensaje: 'Envía entre 1 y 100 identificadores de notificación.' } });
-    const disponibles = new Set((await eventos(req.usuario)).map(a => a.evento));
-    if (ids.some(id => !disponibles.has(id))) return res.status(403).json({ error: { mensaje: 'Una notificación no está disponible para tu cuenta.' } });
-    await Lectura.bulkWrite([...new Set(ids)].map(evento => ({ updateOne: { filter: { _id: `${req.usuario.id}:${evento}` }, update: { $setOnInsert: { usuario: req.usuario.id, evento, fecha: new Date() } }, upsert: true } })));
-    res.json({ mensaje: 'Notificaciones marcadas como leídas.' });
-  } catch (error) { next(error); }
-});
+const run = fn => async (req, res, next) => { try { await fn(req, res); } catch (error) { next(error); } };
+const preferencias = u => ({ notificacionesInternas: u.notificacionesInternas !== false, notificacionesCorreo: u.notificacionesCorreo !== false });
+router.get('/preferencias', run(async (req, res) => {
+  const u = await Usuario.findById(req.usuario.id).select('notificacionesInternas notificacionesCorreo').lean();
+  if (!u) throw new HttpError(401, 'La sesión ya no es válida.', 'SESION_INVALIDA');
+  res.json({ preferencias: preferencias(u) });
+}));
+router.patch('/preferencias', run(async (req, res) => {
+  const b = req.body;
+  if (!b || Array.isArray(b) || Object.keys(b).length !== 1 || typeof b.notificacionesInternas !== 'boolean') throw new HttpError(400, 'Envía únicamente notificacionesInternas como booleano.', 'PREFERENCIAS_INVALIDAS');
+  const u = await Usuario.findByIdAndUpdate(req.usuario.id, { $set: { notificacionesInternas: b.notificacionesInternas } }, { new: true, runValidators: true }).select('notificacionesInternas notificacionesCorreo').lean();
+  if (!u) throw new HttpError(401, 'La sesión ya no es válida.', 'SESION_INVALIDA');
+  res.json({ preferencias: preferencias(u) });
+}));
+router.get('/no-leidas', run(async (req, res) => { res.json({ noLeidas: await Notificacion.countDocuments({ usuario: req.usuario.id, read: false }) }); }));
+router.get('/', run(async (req, res) => {
+  const { pagina = '1', limite = '100' } = req.query;
+  if (typeof pagina !== 'string' || !/^[1-9]\d{0,5}$/.test(pagina) || typeof limite !== 'string' || !/^(?:[1-9]\d?|100)$/.test(limite)) throw new HttpError(400, 'Paginación inválida.', 'FILTROS_INVALIDOS');
+  const filtro = { usuario: req.usuario.id };
+  const [items, total, noLeidas] = await Promise.all([Notificacion.find(filtro).sort({ fecha: -1, _id: -1 }).skip((Number(pagina) - 1) * Number(limite)).limit(Number(limite)).lean(), Notificacion.countDocuments(filtro), Notificacion.countDocuments({ ...filtro, read: false })]);
+  res.json({ notificaciones: items.map(n => ({ id: String(n._id), evento: n.evento, type: n.type, title: n.title, text: n.text, details: n.details, href: n.href, read: n.read, time: new Date(n.fecha).toISOString() })), total, noLeidas, pagina: Number(pagina), limite: Number(limite) });
+}));
+router.patch('/leer-todas', run(async (req, res) => { await Notificacion.updateMany({ usuario: req.usuario.id, read: false }, { $set: { read: true, fechaLectura: new Date() } }); res.json({ mensaje: 'Notificaciones marcadas como leídas.' }); }));
+router.patch('/leer', run(async (req, res) => {
+  const ids = req.body?.eventos;
+  if (!Array.isArray(ids) || !ids.length || ids.length > 100 || ids.some(id => typeof id !== 'string' || !id.length || id.length > 100)) throw new HttpError(400, 'Envía entre 1 y 100 eventos.', 'EVENTOS_INVALIDOS');
+  const unicos = [...new Set(ids)];
+  const filtro = { usuario: req.usuario.id, evento: { $in: unicos } };
+  if (await Notificacion.countDocuments(filtro) !== unicos.length) throw new HttpError(403, 'Una notificación no está disponible para tu cuenta.', 'ACCESO_DENEGADO');
+  await Notificacion.updateMany({ ...filtro, read: false }, { $set: { read: true, fechaLectura: new Date() } });
+  res.json({ mensaje: 'Notificaciones marcadas como leídas.' });
+}));
+router.patch('/:id/leer', run(async (req, res) => {
+  if (!/^[a-f0-9]{24}$/i.test(req.params.id)) throw new HttpError(400, 'Identificador inválido.', 'ID_INVALIDO');
+  const filtro = { _id: req.params.id, usuario: req.usuario.id };
+  if (!(await Notificacion.exists(filtro))) throw new HttpError(404, 'Notificación no disponible.', 'NOTIFICACION_NO_ENCONTRADA');
+  await Notificacion.updateOne({ ...filtro, read: false }, { $set: { read: true, fechaLectura: new Date() } });
+  res.json({ mensaje: 'Notificación marcada como leída.' });
+}));
 module.exports = router;

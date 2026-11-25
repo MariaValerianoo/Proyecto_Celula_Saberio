@@ -192,9 +192,20 @@ async function actualizarEstado(
   return solicitud;
 }
 
+const internas = require('./notificacionInterna.service');
+async function crearConNotificacion(...args) {
+  const solicitud = await crear(...args);
+  await internas.seguro(internas.nuevaSolicitud, solicitud);
+  return solicitud;
+}
+async function actualizarEstadoConNotificacion(...args) {
+  const solicitud = await actualizarEstado(...args);
+  await internas.seguro(internas.respuestaSolicitud, solicitud);
+  return solicitud;
+}
 module.exports = {
-  crear,
+  crear: crearConNotificacion,
   listar,
   obtenerPorId,
-  actualizarEstado,
+  actualizarEstado: actualizarEstadoConNotificacion,
 };

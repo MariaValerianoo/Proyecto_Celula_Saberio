@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import type { AppNotification } from '../../../types/notification'
 import Modal from '../../Modal/Modal'
 import './NotificationBell.css'
+import NotificationPreferences from '../NotificationPreferences/NotificationPreferences'
 interface NotificationBellProps { notifications: AppNotification[] }
 interface Aviso extends AppNotification { evento: string }
 export default function NotificationBell(_props: NotificationBellProps) {
@@ -76,8 +77,9 @@ export default function NotificationBell(_props: NotificationBellProps) {
         </div></header>
         {error && <div role="alert"><p>{error}</p><button type="button" disabled={busy} onClick={() => setRevision(v => v + 1)}>Reintentar consulta</button></div>}
         {loading && <p role="status">Cargando notificaciones...</p>}
+        <NotificationPreferences />
         <div className="bell__list">
-          {!loading && !error && !items.length && <p className="bell__empty">No tienes notificaciones de soportes.</p>}
+          {!loading && !error && !items.length && <p className="bell__empty">No tienes notificaciones.</p>}
           {items.map(n => <button type="button" disabled={busy} className={`bell__item ${n.read ? 'is-read' : 'is-unread'}`} key={n.evento} onClick={() => { setSelected(n); setOpen(false); if (!n.read) void mark([n.evento]) }}>
             <span className={`bell__icon bell__icon--${n.type}`} aria-hidden="true">{n.type === 'success' ? '✓' : n.type === 'warning' ? '!' : '↑'}</span>
             <div className="bell__content"><b>{n.title}</b><p>{n.text}</p><time>{date(n.time)}</time></div>
