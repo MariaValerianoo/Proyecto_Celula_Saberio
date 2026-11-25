@@ -5,6 +5,7 @@ const requerirRol = require('../middlewares/requerirRol');
 const HttpError = require('../utils/HttpError');
 const router = Router();
 router.use(autenticar, requerirRol('admin'));
+router.use('/correo', require('./diagnosticoCorreo.routes'));
 router.get('/usuarios', async (req, res, next) => {
   try {
     const { pagina = '1', limite = '25', rol, buscar = '' } = req.query;
