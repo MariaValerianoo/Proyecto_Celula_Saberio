@@ -28,7 +28,10 @@ async function buscarMonitores(filtros) {
 
   if (materia) {
     filtroPublicacion.materia = materia;
-    filtroPerfil.materiasAcreditadas = materia;
+    filtroPerfil.$or = [
+      { materiasAcreditadas: materia },
+      { materiasOfrecidas: materia },
+    ];
   }
 
   if (modalidad && modalidad !== 'Todas') {

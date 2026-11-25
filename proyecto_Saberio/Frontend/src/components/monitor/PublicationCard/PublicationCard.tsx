@@ -22,9 +22,21 @@ function PublicationCard({ publication, onEdit, onDelete }: PublicationCardProps
           <span>{publication.modality}</span>
           <span>${publication.rate.toLocaleString('es-CO')}/hora</span>
           <span>{publication.duration} min</span>
-          <StatusBadge tone={publication.active ? 'ok' : 'urgent'}>
-            {publication.active ? 'Activa' : 'Inactiva'}
-          </StatusBadge>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 10px',
+              borderRadius: 999,
+              fontWeight: 700,
+              border: '1px solid currentColor',
+            }}
+          >
+            <StatusBadge tone={publication.active ? 'ok' : 'urgent'}>
+              {publication.active ? 'Activa' : 'Inactiva'}
+            </StatusBadge>
+          </span>
         </div>
       </div>
 
