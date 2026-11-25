@@ -1,0 +1,1 @@
+Router de cancelación, propuesta de reprogramación y respuesta del monitor; autenticación, roles y validación de IDs/cuerpos
