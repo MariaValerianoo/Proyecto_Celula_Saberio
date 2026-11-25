@@ -1,1 +1,1 @@
-Restaura el servicio completo existente y añade PropuestaReprogramacion, cancelarMonitoriaEstudiante, proponerReprogramacion y listarPropuestasReprogramacion.
+Restaura el archivo válido recuperado del commit 104b00a y añade PropuestaReprogramacion, cancelarMonitoriaEstudiante, proponerReprogramacion y listarPropuestasReprogramacion.

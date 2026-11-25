@@ -1,1 +1,1 @@
-Restaura la pantalla existente y añade carga de propuestas, botones Cancelar/Reprogramar, confirmación, selector de franjas y estado Reprogramación pendiente.
+Restaura la pantalla original leída y añade carga de propuestas, botones Cancelar/Reprogramar, confirmación con Modal, selector de franjas compatibles y estado Reprogramación pendiente.
