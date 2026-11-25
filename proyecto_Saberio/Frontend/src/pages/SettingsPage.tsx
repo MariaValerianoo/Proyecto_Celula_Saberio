@@ -29,40 +29,33 @@ interface SettingsPageProps {
 function SettingsPage({ role }: SettingsPageProps) {
   const navigate = useNavigate()
   const user = getSession()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedFileName, setSelectedFileName] = useState('')
-  const [supportMessage, setSupportMessage] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [archivos, setArchivos] = useState<File[]>([])
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
-  const handleOpenFileSelector = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleFileSelected = (
-    event: React.ChangeEvent<HTMLInputElement>
+  const handleSeleccionarArchivos = (
+    event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = event.target.files?.[0]
-
-    if (!file) {
-      setSelectedFileName('')
-      setSupportMessage('')
-      return
-    }
-
-    setSelectedFileName(file.name)
-    setSupportMessage(
-      'Soporte seleccionado. La carga definitiva al servidor requiere conectar el endpoint de soportes.'
+    const archivosSeleccionados = Array.from(
+      event.target.files ?? [],
     )
 
-    event.target.value = ''
+    setArchivos(archivosSeleccionados)
+  }
+
+  const handleAbrirSelector = () => {
+    inputRef.current?.click()
   }
 
   return (
-    <DashboardLayout role={role} notifications={NOTIFICATIONS_BY_ROLE[role]}>
+    <DashboardLayout
+      role={role}
+      notifications={NOTIFICATIONS_BY_ROLE[role]}
+    >
       <PageHero
         title="Configuración"
         description="Administra tu cuenta y tu sesión. Las preferencias de notificaciones todavía no tienen persistencia en la API."
@@ -87,53 +80,52 @@ function SettingsPage({ role }: SettingsPageProps) {
 
           {role === 'monitor' && (
             <Card title="Soportes académicos">
-              <ListRow
-                title="Estado de tu acreditación"
-                subtitle="Estado real de tu cuenta"
-                trailing={
-                  <StatusBadge
-                    tone={user?.role === 'monitor' ? 'ok' : 'review'}
-                  >
-                    {user?.role === 'monitor' ? 'Monitor' : 'Pendiente'}
-                  </StatusBadge>
-                }
-              />
-
-              <div
-                style={{
-                  marginTop: 16,
-                  display: 'grid',
-                  gap: 12,
-                }}
-              >
+              <form onSubmit={event => event.preventDefault()}>
                 <input
-                  ref={fileInputRef}
+                  ref={inputRef}
                   type="file"
+                  multiple
                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  onChange={handleFileSelected}
                   style={{ display: 'none' }}
+                  onChange={handleSeleccionarArchivos}
                 />
 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleOpenFileSelector}
-                >
-                  Cargar nuevo soporte
-                </Button>
+                <div className="stack" style={{ gap: 12 }}>
+                  <ListRow
+                    title="Estado de tu acreditación"
+                    subtitle="Estado real de tu cuenta"
+                    trailing={
+                      <StatusBadge
+                        tone={user?.role === 'monitor' ? 'ok' : 'review'}
+                      >
+                        {user?.role === 'monitor' ? 'Monitor' : 'Pendiente'}
+                      </StatusBadge>
+                    }
+                  />
 
-                {selectedFileName && (
-                  <p style={{ fontSize: 14, color: 'var(--texto-suave)' }}>
-                    Archivo seleccionado: <b>{selectedFileName}</b>
-                  </p>
-                )}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleAbrirSelector}
+                  >
+                    Cargar nuevo soporte
+                  </Button>
 
-                {supportMessage && (
-                  <p role="status" style={{ fontSize: 14 }}>
-                    {supportMessage}
-                  </p>
-                )}
-              </div>
+                  {archivos.length > 0 && (
+                    <div>
+                      <b>Documentos seleccionados:</b>
+
+                      <ul>
+                        {archivos.map(archivo => (
+                          <li key={archivo.name}>
+                            {archivo.name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </form>
             </Card>
           )}
 
@@ -146,9 +138,9 @@ function SettingsPage({ role }: SettingsPageProps) {
                     color: 'var(--texto-suave)',
                   }}
                 >
-                  Contraseñas almacenadas con hashing seguro, comunicación
-                  cifrada por HTTPS y secretos gestionados con variables de
-                  entorno.
+                  Contraseñas almacenadas con hashing seguro,
+                  comunicación cifrada por HTTPS y secretos
+                  gestionados con variables de entorno.
                 </p>
               </Card>
 
@@ -175,12 +167,7 @@ function SettingsPage({ role }: SettingsPageProps) {
               />
 
               <div>
-                <b
-                  style={{
-                    display: 'block',
-                    fontSize: 17,
-                  }}
-                >
+                <b style={{ display: 'block', fontSize: 17 }}>
                   {user?.name}
                 </b>
 

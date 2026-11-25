@@ -1,24 +1,49 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
+
 const app = express();
+
 app.disable('x-powered-by');
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
-app.use('/api', (req, res, next) => { res.set('Cache-Control', 'private, no-store'); next(); });
+
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'private, no-store');
+  next();
+});
+
 app.post('/api/auth/logout', async (req, res, next) => {
   try {
     const { revocar } = require('./src/services/sesionSegura.service');
     const { NOMBRE_COOKIE_SESION } = require('./src/utils/cookies');
+
     await revocar(req.cookies?.[NOMBRE_COOKIE_SESION]);
+
     next();
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 });
+
 app.use('/api/docs', require('./src/routes/docs.routes'));
+
 app.get('/api/salud', (req, res) => {
-  const estados = { 0: 'desconectado', 1: 'conectado', 2: 'conectando', 3: 'desconectando' };
-  res.status(200).json({ estado: 'ok', servicio: 'Saberio API', baseDeDatos: estados[mongoose.connection.readyState] || 'desconocido' });
+  const estados = {
+    0: 'desconectado',
+    1: 'conectado',
+    2: 'conectando',
+    3: 'desconectando',
+  };
+
+  res.status(200).json({
+    estado: 'ok',
+    servicio: 'Saberio API',
+    baseDeDatos:
+      estados[mongoose.connection.readyState] || 'desconocido',
+  });
 });
+
 app.use('/api/auth', require('./src/routes/auth.routes'));
 app.use('/api/verificacion', require('./src/routes/verificacionCorreo.routes'));
 app.use('/api/correo/microsoft', require('./src/routes/correoMicrosoft.routes'));
@@ -33,18 +58,41 @@ app.use('/api/publicaciones', require('./src/routes/publicacion.routes'));
 app.use('/api/busqueda', require('./src/routes/busqueda.routes'));
 app.use('/api/admin', require('./src/routes/admin.routes'));
 app.use('/api/notificaciones', require('./src/routes/notificacion.routes'));
+
 let rutasSoportes;
+
 app.use('/api/soportes', (req, res, next) => {
   if (!rutasSoportes) {
-    try { rutasSoportes = require('./src/routes/soporteAcademico.routes'); }
-    catch (error) {
-      console.error('No se pudo inicializar soportes:', { codigo: error.code, operacion: error.syscall, ruta: error.path, mensaje: error.message, stack: error.stack });
-      return res.status(503).json({ error: { codigo: 'SOPORTES_INICIALIZACION_FALLIDA', mensaje: 'No se pudo iniciar el almacenamiento de soportes. Revisa los logs del backend. El inicio de sesión sigue siendo independiente.' } });
+    try {
+      rutasSoportes = require('./src/routes/soporteAcademico.routes');
+    } catch (error) {
+      console.error('No se pudo inicializar soportes:', {
+        codigo: error.code,
+        operacion: error.syscall,
+        ruta: error.path,
+        mensaje: error.message,
+        stack: error.stack,
+      });
+
+      return res.status(503).json({
+        error: {
+          codigo: 'SOPORTES_INICIALIZACION_FALLIDA',
+          mensaje:
+            'No se pudo iniciar el almacenamiento de soportes. Revisa los logs del backend. El inicio de sesión sigue siendo independiente.',
+        },
+      });
     }
   }
+
   return rutasSoportes(req, res, next);
 });
-const { rutaNoEncontrada, manejarErrores } = require('./src/middlewares/manejarErrores');
+
+const {
+  rutaNoEncontrada,
+  manejarErrores,
+} = require('./src/middlewares/manejarErrores');
+
 app.use(rutaNoEncontrada);
 app.use(manejarErrores);
+
 module.exports = app;
