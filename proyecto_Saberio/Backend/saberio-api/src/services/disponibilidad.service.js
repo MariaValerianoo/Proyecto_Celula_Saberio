@@ -1,22 +1,38 @@
 const Disponibilidad = require('../../models/disponibilidad.model');
 const HttpError = require('../utils/HttpError');
-
-function convertirHoraAMinutos(hora) {
-  const [horas, minutos] = hora
-    .split(':')
-    .map(Number);
-
-  return horas * 60 + minutos;
-}
+const {
+  horaAMinutos,
+  inicioDeHoy,
+  esFechaFutura,
+} = require('../utils/eventosDisponibilidad');
 
 async function crear(idMonitor, datos) {
-  const inicio = convertirHoraAMinutos(
-    datos.horaInicio
-  );
+  const inicio = horaAMinutos(datos.horaInicio);
+  const fin = horaAMinutos(datos.horaFin);
 
-  const fin = convertirHoraAMinutos(
-    datos.horaFin
-  );
+  if (inicio === null || fin === null) {
+    throw new HttpError(
+      400,
+      'El horario indicado no es válido',
+      'HORARIO_INVALIDO'
+    );
+  }
+
+  if (fin <= inicio) {
+    throw new HttpError(
+      400,
+      'La hora de finalización debe ser posterior a la hora de inicio',
+      'HORARIO_INVALIDO'
+    );
+  }
+
+  if (!esFechaFutura(datos.fecha)) {
+    throw new HttpError(
+      400,
+      'Solo puedes crear disponibilidad para hoy o una fecha futura',
+      'FECHA_NO_VALIDA'
+    );
+  }
 
   const disponibilidades = await Disponibilidad.find({
     monitor: idMonitor,
@@ -25,15 +41,12 @@ async function crear(idMonitor, datos) {
 
   const existeSuperposicion = disponibilidades.some(
     (disponibilidad) => {
-      const inicioExistente =
-        convertirHoraAMinutos(
-          disponibilidad.horaInicio
-        );
-
-      const finExistente =
-        convertirHoraAMinutos(
-          disponibilidad.horaFin
-        );
+      const inicioExistente = horaAMinutos(
+        disponibilidad.horaInicio
+      );
+      const finExistente = horaAMinutos(
+        disponibilidad.horaFin
+      );
 
       return (
         inicio < finExistente &&
@@ -75,12 +88,72 @@ async function listarDisponibles(idMonitor) {
   const disponibilidades = await Disponibilidad.find({
     monitor: idMonitor,
     estado: 'Disponible',
+    fecha: {
+      $gte: inicioDeHoy(),
+    },
   }).sort({
     fecha: 1,
     horaInicio: 1,
   });
 
   return disponibilidades;
+}
+
+async function reservarSiDisponible(
+  idDisponibilidad,
+  idMonitor
+) {
+  const disponibilidad =
+    await Disponibilidad.findOneAndUpdate(
+      {
+        _id: idDisponibilidad,
+        monitor: idMonitor,
+        estado: 'Disponible',
+      },
+      {
+        $set: {
+          estado: 'Reservado',
+        },
+      },
+      {
+        new: true,
+      }
+    );
+
+  if (!disponibilidad) {
+    throw new HttpError(
+      409,
+      'El horario seleccionado ya no está disponible',
+      'HORARIO_NO_DISPONIBLE'
+    );
+  }
+
+  return disponibilidad;
+}
+
+async function liberarSiReservada(
+  idDisponibilidad,
+  idMonitor
+) {
+  if (!idDisponibilidad) {
+    return null;
+  }
+
+  return Disponibilidad.findOneAndUpdate(
+    {
+      _id: idDisponibilidad,
+      monitor: idMonitor,
+      estado: 'Reservado',
+    },
+    {
+      $set: {
+        estado: 'Disponible',
+      },
+    },
+    {
+      new: true,
+    }
+  );
 }
 
 async function actualizarEstado(
@@ -132,7 +205,6 @@ async function actualizarEstado(
   }
 
   disponibilidad.estado = estado;
-
   await disponibilidad.save();
 
   return disponibilidad;
@@ -183,6 +255,8 @@ module.exports = {
   crear,
   listarPropias,
   listarDisponibles,
+  reservarSiDisponible,
+  liberarSiReservada,
   actualizarEstado,
   eliminar,
 };

@@ -1,11 +1,11 @@
 const SesionTutoria = require('../../models/sesionTutoria.model');
 const SolicitudTutoria = require('../../models/solicitudTutoria.model');
 const HttpError = require('../utils/HttpError');
+const disponibilidadService = require('./disponibilidad.service');
+const { sesionNoIniciada } = require('../utils/eventosDisponibilidad');
 
 async function crear(idMonitor, datos) {
-  const solicitud = await SolicitudTutoria.findById(
-    datos.solicitud
-  );
+  const solicitud = await SolicitudTutoria.findById(datos.solicitud);
 
   if (!solicitud) {
     throw new HttpError(
@@ -141,9 +141,65 @@ async function finalizar(idSesion, idMonitor, notas) {
   return sesion;
 }
 
+async function cancelar(idSesion, idMonitor) {
+  const sesion = await SesionTutoria.findById(idSesion);
+
+  if (!sesion) {
+    throw new HttpError(
+      404,
+      'La sesión no existe',
+      'SESION_NO_ENCONTRADA'
+    );
+  }
+
+  if (sesion.monitor.toString() !== idMonitor) {
+    throw new HttpError(
+      403,
+      'Solo el monitor puede cancelar esta sesión',
+      'ACCESO_DENEGADO'
+    );
+  }
+
+  if (sesion.estado !== 'Programada') {
+    throw new HttpError(
+      400,
+      'Esta sesión ya fue finalizada o cancelada',
+      'SESION_NO_PROGRAMADA'
+    );
+  }
+
+  if (!sesionNoIniciada(sesion.fecha, sesion.hora)) {
+    throw new HttpError(
+      400,
+      'No puedes cancelar una sesión que ya inició',
+      'SESION_YA_INICIADA'
+    );
+  }
+
+  sesion.estado = 'Cancelada';
+  await sesion.save();
+
+  const solicitud = await SolicitudTutoria.findById(
+    sesion.solicitud
+  );
+
+  if (solicitud) {
+    solicitud.estado = 'Cancelada';
+    await solicitud.save();
+
+    await disponibilidadService.liberarSiReservada(
+      solicitud.disponibilidad,
+      idMonitor
+    );
+  }
+
+  return sesion;
+}
+
 module.exports = {
   crear,
   listar,
   obtenerPorId,
   finalizar,
+  cancelar,
 };

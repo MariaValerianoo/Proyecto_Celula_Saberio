@@ -6,7 +6,7 @@ export const id = (value: Ref | undefined): string => typeof value === 'string' 
 export const nombre = (value: Ref | undefined) => typeof value === 'object' && value ? value.nombre || 'No disponible' : 'No disponible'
 
 export interface Materia { id?: string; _id?: string; nombre: string; codigo: string; facultad: string; creditos: number; activa: boolean }
-export interface Solicitud { id?: string; _id?: string; materia: Ref; estudiante: Ref; monitor: Ref; tema: string; descripcion: string; modalidad: string; estado: string; fechaPreferida: string; horaPreferida: string; duracionEstimadaHoras: number; respuestaMonitor?: string }
+export interface Solicitud { id?: string; _id?: string; materia: Ref; estudiante: Ref; monitor: Ref; tema: string; descripcion: string; modalidad: string; estado: string; fechaPreferida: string; horaPreferida: string; duracionEstimadaHoras: number; disponibilidad?: Ref; respuestaMonitor?: string }
 export interface Sesion { id?: string; _id?: string; solicitud: Ref; materia: Ref; estudiante: Ref; monitor: Ref; tema: string; modalidad: string; estado: string; fecha: string; hora: string; duracionHoras: number; lugarOEnlace?: string; notas?: string }
 export interface PublicacionBusqueda { id?: string; _id?: string; materia: Ref; modalidad: string; descripcion?: string; tarifaPorHora: number }
 export interface Resultado { monitor: Ref; calificacion: number | null; totalEvaluaciones: number; publicaciones: PublicacionBusqueda[]; disponibilidad: { id?: string; _id?: string; fecha: string; horaInicio: string; horaFin: string }[] }
@@ -39,6 +39,10 @@ export function useLista<T>(path: string, field: string) {
 
 export function useMaterias() {
   return useLista<Materia>('/materias', 'materias')
+}
+
+export async function cancelarSesion(idSesion: string) {
+  return request(`/sesiones/${encodeURIComponent(idSesion)}/cancelar`, 'PATCH', {})
 }
 
 export function datos(form: HTMLFormElement) { return Object.fromEntries(new FormData(form).entries()) }

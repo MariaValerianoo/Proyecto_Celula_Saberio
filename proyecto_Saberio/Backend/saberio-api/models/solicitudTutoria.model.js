@@ -67,6 +67,12 @@ const solicitudTutoriaSchema = new Schema(
       max: [8, 'La duración no puede superar 8 horas'],
     },
 
+    disponibilidad: {
+      type: Schema.Types.ObjectId,
+      ref: 'Disponibilidad',
+      default: null,
+    },
+
     estado: {
       type: String,
       enum: [

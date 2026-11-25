@@ -52,9 +52,22 @@ async function finalizar(req, res) {
   });
 }
 
+async function cancelar(req, res) {
+  const sesion = await servicio.cancelar(
+    req.params.id,
+    req.usuario.id
+  );
+
+  res.status(200).json({
+    mensaje: 'Sesión cancelada correctamente',
+    sesion,
+  });
+}
+
 module.exports = {
   crear,
   listar,
   obtenerPorId,
   finalizar,
+  cancelar,
 };

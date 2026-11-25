@@ -34,4 +34,11 @@ router.patch(
   controlador.finalizar
 );
 
+router.patch(
+  '/:id/cancelar',
+  autenticar,
+  requerirRol('monitor'),
+  controlador.cancelar
+);
+
 module.exports = router;
