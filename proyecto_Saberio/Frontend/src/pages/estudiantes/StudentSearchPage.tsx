@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom'
 import type { Monitor, SessionRequestForm } from '../../types/monitoring'
 import { useToast } from '../../hooks/useToast'
 import { request, id, nombre, dia, mensajeError } from '../../services/tutoriaService'
-import type { Resultado, PublicacionBusqueda } from '../../services/tutoriaService'
+import type { Resultado, PublicacionBusqueda, Disponibilidad } from '../../services/tutoriaService'
 import DashboardLayout from '../../components/layout/DashboardLayout/DashboardLayout'
 import PageHero from '../../components/layout/PageHero/PageHero'
 import Card from '../../components/shared/Card/Card'
@@ -23,6 +23,12 @@ interface Tarjeta extends Monitor {
   publicacion: PublicacionBusqueda
 }
 
+interface Seleccion {
+  monitorId: string
+  slot: string
+  disponibilidadId: string
+}
+
 function StudentSearchPage() {
   const location = useLocation()
   const { message, visible, showToast } = useToast()
@@ -32,7 +38,7 @@ function StudentSearchPage() {
   const [modality, setModality] = useState('')
   const [minRating, setMinRating] = useState('')
   const [sort, setSort] = useState('best')
-  const [selection, setSelection] = useState<{ monitorId: string; slot: string } | null>(null)
+  const [selection, setSelection] = useState<Seleccion | null>(null)
   const [requesting, setRequesting] = useState<Tarjeta | null>(null)
   const [items, setItems] = useState<Resultado[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,8 +117,16 @@ function StudentSearchPage() {
   }
 
   const handleSelectSlot = (monitorId: number, slot: string) => {
+    const tarjeta = tarjetas.find(item => item.id === monitorId)
+    const franja: Disponibilidad | undefined = tarjeta?.resultado.disponibilidad.find(
+      item => `${dia(item.fecha)} · ${item.horaInicio}–${item.horaFin}` === slot
+    )
     const same = selection?.monitorId === String(monitorId) && selection.slot === slot
-    setSelection(same ? null : { monitorId: String(monitorId), slot })
+    setSelection(same || !franja ? null : {
+      monitorId: String(monitorId),
+      slot,
+      disponibilidadId: id(franja),
+    })
   }
 
   const handleSubmitRequest = async (data: SessionRequestForm) => {
@@ -128,6 +142,7 @@ function StudentSearchPage() {
         fechaPreferida: selection?.slot.split(' · ')[0] || new Date().toISOString().slice(0, 10),
         horaPreferida: selection?.slot.split(' · ')[1]?.split('–')[0] || '08:00',
         duracionEstimadaHoras: 1,
+        disponibilidad: selection?.disponibilidadId || null,
       })
       showToast(resultado.mensaje || 'Solicitud enviada ✅')
       setRequesting(null); setSelection(null); setRevision(v => v + 1)
