@@ -1,1 +1,27 @@
-Actualiza app.js para montar /api/cambios-monitoria después de /api/sesiones y antes de los manejadores de ruta no encontrada y errores. No cambia ninguna otra ruta ni middleware.
+const express = require('express');
+const cors = require('cors');
+
+const api = require('./api');
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.use('/api', api);
+
+app.use((req, res) => {
+  res.status(404).json({
+    mensaje: 'Ruta no encontrada',
+  });
+});
+
+app.use((error, req, res, next) => {
+  console.error(error);
+
+  res.status(error?.status || 500).json({
+    mensaje: error?.message || 'Error interno del servidor',
+  });
+});
+
+module.exports = app;
