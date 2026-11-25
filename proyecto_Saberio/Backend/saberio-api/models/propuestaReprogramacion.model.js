@@ -1,0 +1,1 @@
+Modelo Mongoose de propuestas de reprogramación con solicitud, estudiante, monitor, disponibilidad, estado y fecha de respuesta; índice único parcial para una propuesta pendiente por solicitud.

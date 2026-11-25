@@ -1,0 +1,1 @@
+Servicio transaccional de cancelación del estudiante, propuesta de reprogramación, respuesta del monitor y listado; valida propiedad, estados, horario, duración y disponibilidad.
