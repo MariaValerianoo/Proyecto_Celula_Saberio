@@ -1,1 +1,1 @@
-Restaura la pantalla con el código completo recuperado del commit 104b00a y añade carga de propuestas, botones Cancelar/Reprogramar, confirmación con Modal, selector de franjas compatibles y estado Reprogramación pendiente.
+Restaura el archivo con el código original completo recuperado del commit 104b00a, sin añadir botones ni integración no verificada.
