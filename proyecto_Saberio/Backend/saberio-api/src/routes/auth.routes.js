@@ -5,7 +5,12 @@ const registrarSegundoRol = require('../middlewares/registrarSegundoRol');
 const validarLogin = require('../middlewares/validarLogin');
 const autenticar = require('../middlewares/autenticar');
 const { validarSolicitudRecuperacion, validarRestablecimientoContrasena } = require('../middlewares/validarRecuperacion');
+const { DOMINIOS_INSTITUCIONALES } = require('../../config/dominiosInstitucionales');
 const router = Router();
+router.get('/dominios-institucionales', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ dominios: DOMINIOS_INSTITUCIONALES });
+});
 router.use('/admin', require('./admin.routes'));
 router.post('/registro', validarRegistro, registrarSegundoRol, controlador.registrar);
 router.post('/login', validarLogin, controlador.login);

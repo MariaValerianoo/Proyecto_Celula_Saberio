@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { api } from './services/authService'
+import { cargarDominiosInstitucionales } from './utils/validators'
 import AppRoutes from './routes/AppRoutes'
 const PUBLIC_ROUTES = new Set(['/', '/login', '/registro'])
 function App() {
@@ -39,11 +40,13 @@ function App() {
         failedClose.current = false
       }).catch(err => { failedClose.current = true; throw err })
     }
-    ;(pending.current || Promise.resolve()).then(() => { if (active) setReady(gateKey) })
-      .catch(() => { if (active) setError('No se pudo cerrar la sesión de forma segura. Reintenta antes de continuar.') })
+    ;(pending.current || Promise.resolve()).then(async () => {
+      if (publicPage) await cargarDominiosInstitucionales()
+      if (active) setReady(gateKey)
+    }).catch(() => { if (active) setError('No se pudo preparar el acceso seguro. Comprueba la conexión e inténtalo otra vez.') })
     return () => { active = false }
   }, [publicPage, gateKey])
-  if (ready !== gateKey || error) return error ? <div role="alert"><p>{error}</p><button onClick={() => setAttempt(v => v + 1)}>Reintentar cierre seguro</button></div> : <p role="status">Preparando acceso seguro a Saberio...</p>
+  if (ready !== gateKey || error) return error ? <div role="alert"><p>{error}</p><button onClick={() => setAttempt(v => v + 1)}>Reintentar acceso seguro</button></div> : <p role="status">Preparando acceso seguro a Saberio...</p>
   return <div ref={content}><AppRoutes /></div>
 }
 export default App

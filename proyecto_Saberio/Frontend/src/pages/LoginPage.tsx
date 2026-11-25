@@ -10,7 +10,6 @@ import ForgotPasswordModal from '../components/ForgotPassword/ForgotPassword'
 import { isInstitutionalEmail } from '../utils/validators'
 import { login, saveSession, redirectByRole } from '../services/authService'
 const logo = new URL('../assets/logo.png', import.meta.url).href
-
 function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -20,17 +19,15 @@ function LoginPage() {
   const [loginError, setLoginError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showRecover, setShowRecover] = useState(false)
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (loading) return
     setLoginError('')
-
     const emailOk = isInstitutionalEmail(email)
     const passOk = password.length > 0
-    setEmailError(emailOk ? '' : 'Ingresa un correo institucional válido (@urosario.edu.co)')
+    setEmailError(emailOk ? '' : 'Ingresa un correo de una universidad autorizada en Saberio.')
     setPasswordError(passOk ? '' : 'Ingresa tu contraseña')
     if (!emailOk || !passOk) return
-
     setLoading(true)
     try {
       const user = await login(email.trim(), password)
@@ -41,66 +38,17 @@ function LoginPage() {
       setLoading(false)
     }
   }
-
-  return (
-    <div className="page">
-      <Header brand="Saberio" logo={logo} subtitle="Universidad del Rosario" />
-
-      <main className="page__content">
-        <AuthCard
-          title="Bienvenido de nuevo"
-          subtitle="Inicia sesión con tu correo institucional"
-          footer={<>¿No tienes cuenta? <a href="/registro">Crear cuenta</a></>}
-        >
-          {loginError && <Alert type="error" title="⚠️ Error al iniciar sesión" message={loginError} />}
-
-          <form onSubmit={handleSubmit} noValidate>
-            <FormField
-              id="email"
-              label="Correo institucional"
-              type="email"
-              value={email}
-              onChange={(v) => { setEmail(v); setEmailError('') }}
-              placeholder="ejemplo@urosario.edu.co"
-              autoComplete="email"
-              error={emailError}
-            />
-            <FormField
-              id="password"
-              label="Contraseña"
-              type="password"
-              value={password}
-              onChange={(v) => { setPassword(v); setPasswordError('') }}
-              placeholder="Tu contraseña"
-              autoComplete="current-password"
-              error={passwordError}
-            />
-
-            <div className="login-options">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                />{' '}
-                Recordarme
-              </label>
-              <button type="button" className="link-button" onClick={() => setShowRecover(true)}>
-                ¿Olvidaste tu contraseña?
-              </button>
-            </div>
-
-            <Button type="submit" fullWidth loading={loading} loadingText="Iniciando sesión...">
-              Iniciar sesión
-            </Button>
-          </form>
-        </AuthCard>
-      </main>
-
-      <Footer />
-      <ForgotPasswordModal open={showRecover} onClose={() => setShowRecover(false)} />
-    </div>
-  )
+  return <div className="page">
+    <Header brand="Saberio" logo={logo} subtitle="Universidad del Rosario" />
+    <main className="page__content"><AuthCard title="Bienvenido de nuevo" subtitle="Inicia sesión con tu correo institucional" footer={<>¿No tienes cuenta? <a href="/registro">Crear cuenta</a></>}>
+      {loginError && <Alert type="error" title="Error al iniciar sesión" message={loginError} />}
+      <form onSubmit={handleSubmit} noValidate>
+        <FormField id="email" label="Correo institucional" type="email" value={email} onChange={v => { setEmail(v); setEmailError('') }} placeholder="ejemplo@urosario.edu.co" autoComplete="email" error={emailError} />
+        <FormField id="password" label="Contraseña" type="password" value={password} onChange={v => { setPassword(v); setPasswordError('') }} placeholder="Tu contraseña" autoComplete="current-password" error={passwordError} />
+        <div className="login-options"><label><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} /> Recordarme</label><button type="button" className="link-button" onClick={() => setShowRecover(true)}>¿Olvidaste tu contraseña?</button></div>
+        <Button type="submit" fullWidth loading={loading} loadingText="Iniciando sesión...">Iniciar sesión</Button>
+      </form>
+    </AuthCard></main><Footer /><ForgotPasswordModal open={showRecover} onClose={() => setShowRecover(false)} />
+  </div>
 }
-
 export default LoginPage
